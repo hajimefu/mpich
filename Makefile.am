@@ -47,7 +47,7 @@ pkgconfigdir = @pkgconfigdir@
 # to build src/mpi/errhan/defmsg.h
 errnames_txt_files = 
 
-external_subdirs = @mplsrcdir@ @opasrcdir@
+external_subdirs = @mplsrcdir@ @opasrcdir@ @zmsrcdir@
 external_ldflags = @mpllibdir@ @opalibdir@
 external_libs = @WRAPPER_LIBS@
 mpi_convenience_libs =

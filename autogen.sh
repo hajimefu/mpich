@@ -167,7 +167,7 @@ export do_build_configure
 MAKE=${MAKE-make}
 
 # external packages that require autogen.sh to be run for each of them
-externals="src/pm/hydra src/mpi/romio src/openpa"
+externals="src/pm/hydra src/mpi/romio src/openpa src/izem"
 if [ -e src/libfabric ]; then
     externals="${externals} src/libfabric"
 fi
