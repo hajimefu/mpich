@@ -126,6 +126,55 @@ M*/
 
 #endif /* MPICH_IS_THREADED */
 
+/*M MPIDU_THREAD_CS_TRY_ENTER - Try enter a named critical section
+
+  Input Parameters:
++ _name - name of the critical section
+- _context - A context (typically an object) of the critical section
+
+M*/
+#define MPIDU_THREAD_CS_TRYENTER(name, mutex, success) MPIDUI_THREAD_CS_TRYENTER_##name(mutex, success)
+
+#if defined(MPICH_IS_THREADED)
+
+#if MPICH_THREAD_GRANULARITY == MPICH_THREAD_GRANULARITY__GLOBAL
+
+#define MPIDUI_THREAD_CS_TRYENTER_GLOBAL(mutex, success)               \
+    do {                                                                \
+        if (MPIR_ThreadInfo.isThreaded) {                               \
+            int rec_err_ = 0;                                           \
+            MPIR_Per_thread_t *per_thread = NULL;                       \
+                                                                        \
+            MPL_DBG_MSG(MPIR_DBG_THREAD, TYPICAL, "recursive try-locking GLOBAL mutex"); \
+            MPID_THREADPRIV_KEY_GET_ADDR(MPIR_ThreadInfo.isThreaded, MPIR_Per_thread_key, \
+                                         MPIR_Per_thread, per_thread, &rec_err_); \
+            MPIR_Assert(rec_err_ == 0);                                 \
+                                                                        \
+            if (per_thread->lock_depth == 0) {                          \
+                int err_ = 0;                                           \
+                MPIDU_Thread_mutex_trylock(&mutex, &err_, &success);    \
+                MPIR_Assert(err_ == 0);                                 \
+                if (success)                                            \
+                    per_thread->lock_depth++;                           \
+            } else                                                      \
+                per_thread->lock_depth++;                               \
+        }                                                               \
+    } while (0)
+#define MPIDUI_THREAD_CS_ENTER_POBJ(mutex) do {} while (0)
+
+#else /* MPICH_THREAD_GRANULARITY == MPICH_THREAD_GRANULARITY_POBJ */
+
+#error "Critical section granularity must be global"
+
+#endif  /* MPICH_THREAD_GRANULARITY */
+
+#else  /* !defined(MPICH_IS_THREADED) */
+
+#define MPIDUI_THREAD_CS_ENTER_GLOBAL(mutex) do {} while (0)
+#define MPIDUI_THREAD_CS_ENTER_POBJ(mutex) do {} while (0)
+
+#endif /* MPICH_IS_THREADED */
+
 
 /*M MPIDU_THREAD_CS_EXIT - Exit a named critical section
 
@@ -350,6 +399,15 @@ M*/
         MPL_DBG_MSG_P(MPIR_DBG_THREAD,VERBOSE,"exit MPL_thread_mutex_lock %p", &(mutex_ptr_)->mutex); \
         OPA_decr_int(&(mutex_ptr_)->num_queued_threads);                \
     } while (0)
+
+#define MPIDU_Thread_mutex_trylock(mutex_ptr_, err_ptr_, success_ptr_)  \
+    do {                                                                \
+        MPL_DBG_MSG_P(MPIR_DBG_THREAD,VERBOSE,"enter MPL_thread_mutex_trylock %p", &(mutex_ptr_)->mutex); \
+        MPL_thread_mutex_trylock(&(mutex_ptr_)->mutex, err_ptr_, success_ptr_);          \
+        MPIR_Assert(*err_ptr_ == 0);                                    \
+        MPL_DBG_MSG_P(MPIR_DBG_THREAD,VERBOSE,"exit MPL_thread_mutex_trylock %p", &(mutex_ptr_)->mutex); \
+    } while (0)
+
 
 /*@
   MPIDU_Thread_unlock - release a mutex

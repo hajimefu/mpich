@@ -67,12 +67,13 @@ int MPI_Put(const void *origin_addr, int origin_count, MPI_Datatype
 {
     static const char FCNAME[] = "MPI_Put";
     int mpi_errno = MPI_SUCCESS;
+    int cs_enter_success = 0;
     MPIR_Win *win_ptr = NULL;
     MPIR_FUNC_TERSE_STATE_DECL(MPID_STATE_MPI_PUT);
 
     MPIR_ERRTEST_INITIALIZED_ORDIE();
-    
-    MPID_THREAD_CS_ENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX);
+    while (!cs_enter_success)
+        MPID_THREAD_CS_TRYENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX, cs_enter_success);
     MPIR_FUNC_TERSE_RMA_ENTER(MPID_STATE_MPI_PUT);
 
     /* Validate parameters, especially handles needing to be converted */

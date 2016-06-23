@@ -114,6 +114,20 @@ void MPL_thread_create(MPL_thread_func_t func, void *data, MPL_thread_id_t * id,
         *(int *)(err_ptr_) = err__;                                     \
     } while (0)
 
+#define MPL_thread_mutex_trylock(mutex_ptr_, err_ptr_, success_ptr_)    \
+    do {                                                                \
+        *success_ptr_ = 0;                                              \
+        int err__;                                                      \
+        err__ = pthread_mutex_trylock(mutex_ptr_);                      \
+        *success_ptr_ = (err__ == 0);                                   \
+        if (unlikely(err__ == EINVAL)) {                                \
+            MPL_internal_sys_error_printf("pthread_mutex_lock", err__,  \
+                                          "    %s:%d\n", __FILE__, __LINE__); \
+        }                                                               \
+        *(int *)(err_ptr_) = (err__ == EINVAL);                         \
+    } while (0)
+
+
 
 #define MPL_thread_mutex_unlock(mutex_ptr_, err_ptr_)                   \
     do {                                                                \
