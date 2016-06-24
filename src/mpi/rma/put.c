@@ -72,8 +72,6 @@ int MPI_Put(const void *origin_addr, int origin_count, MPI_Datatype
     MPIR_FUNC_TERSE_STATE_DECL(MPID_STATE_MPI_PUT);
 
     MPIR_ERRTEST_INITIALIZED_ORDIE();
-    while (!cs_enter_success)
-        MPID_THREAD_CS_TRYENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX, cs_enter_success);
     MPIR_FUNC_TERSE_RMA_ENTER(MPID_STATE_MPI_PUT);
 
     /* Validate parameters, especially handles needing to be converted */
@@ -139,17 +137,66 @@ int MPI_Put(const void *origin_addr, int origin_count, MPI_Datatype
 #   endif /* HAVE_ERROR_CHECKING */
 
     /* ... body of routine ...  */
+#if !defined(MPIQ_QUEUE_MODEL)
+    while (!cs_enter_success)
+        MPID_THREAD_CS_TRYENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX, cs_enter_success);
     
     mpi_errno = MPID_Put(origin_addr, origin_count, origin_datatype,
                          target_rank, target_disp, target_count,
                          target_datatype, win_ptr);
     if (mpi_errno != MPI_SUCCESS) goto fn_fail;
+#else
+    MPID_THREAD_CS_TRYENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX, cs_enter_success);
+    if (cs_enter_success) {
+        /* Got the lock: progress all pending ops */
+        /* First flush what's in the queue in FIFO order */
+        MPIQ_rma_elemt_t* rma_elemt = NULL;
+        zm_glqueue_dequeue(&win_ptr->pend_ops_q, (void**)&rma_elemt);
+        while(rma_elemt != NULL) {
+            switch(rma_elemt->op) {
+                case MPIQ_PUT:
+                    mpi_errno = MPID_Put(rma_elemt->origin_addr,
+                                         rma_elemt->origin_count,
+                                         rma_elemt->origin_datatype,
+                                         rma_elemt->target_rank,
+                                         rma_elemt->target_disp,
+                                         rma_elemt->target_count,
+                                         rma_elemt->target_datatype,
+                                         win_ptr);
+                    if (mpi_errno != MPI_SUCCESS) goto fn_fail;
+            }
+            MPID_Free_mem(rma_elemt);
+            zm_glqueue_dequeue(&win_ptr->pend_ops_q, (void**)&rma_elemt);
+        }
+        /* Issue my own operation */
+        mpi_errno = MPID_Put(origin_addr, origin_count, origin_datatype,
+                     target_rank, target_disp, target_count,
+                     target_datatype, win_ptr);
+        if (mpi_errno != MPI_SUCCESS) goto fn_fail;
+    } else {
+        /* Failed to acquire the lock: enqueue my work */
+        MPIQ_rma_elemt_t* rma_elemt = NULL;
+        rma_elemt = MPID_Alloc_mem(sizeof *rma_elemt, NULL);
+        rma_elemt->op               = MPIQ_PUT;
+        rma_elemt->origin_addr      = origin_addr;
+        rma_elemt->origin_count     = origin_count;
+        rma_elemt->origin_datatype  = origin_datatype;
+        rma_elemt->target_rank      = target_rank;
+        rma_elemt->target_disp      = target_disp;
+        rma_elemt->target_count     = target_count;
+        rma_elemt->target_datatype  = target_datatype;
+        zm_glqueue_enqueue(&win_ptr->pend_ops_q, rma_elemt);
+    }
+#endif
 
     /* ... end of body of routine ... */
 
   fn_exit:
     MPIR_FUNC_TERSE_RMA_EXIT(MPID_STATE_MPI_PUT);
-    MPID_THREAD_CS_EXIT(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX);
+#if defined(MPIQ_QUEUE_MODEL)
+    if(cs_enter_success)
+#endif
+        MPID_THREAD_CS_EXIT(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX);
     return mpi_errno;
 
   fn_fail:
