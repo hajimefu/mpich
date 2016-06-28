@@ -98,6 +98,31 @@ int MPI_Win_unlock(int rank, MPI_Win win)
 
     /* ... body of routine ...  */
     
+#if defined(MPIQ_QUEUE_MODEL)
+    {
+        /* First progress all pending ops */
+        /* flush what's in the queue in FIFO order */
+        MPIQ_rma_elemt_t* rma_elemt = NULL;
+        zm_glqueue_dequeue(&win_ptr->pend_ops_q, (void**)&rma_elemt);
+        while(rma_elemt != NULL) {
+            switch(rma_elemt->op) {
+                case MPIQ_PUT:
+                    mpi_errno = MPID_Put(rma_elemt->origin_addr,
+                                         rma_elemt->origin_count,
+                                         rma_elemt->origin_datatype,
+                                         rma_elemt->target_rank,
+                                         rma_elemt->target_disp,
+                                         rma_elemt->target_count,
+                                         rma_elemt->target_datatype,
+                                         win_ptr);
+                    if (mpi_errno != MPI_SUCCESS) goto fn_fail;
+            }
+            MPID_Free_mem(rma_elemt);
+            zm_glqueue_dequeue(&win_ptr->pend_ops_q, (void**)&rma_elemt);
+        }
+    }
+#endif
+
     mpi_errno = MPID_Win_unlock(rank, win_ptr);
     if (mpi_errno != MPI_SUCCESS) goto fn_fail;
 
