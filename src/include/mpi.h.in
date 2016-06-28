@@ -89,6 +89,9 @@ extern "C" {
 #define MPI_MESSAGE_NULL   ((MPI_Message)0x2c000000)
 #define MPI_MESSAGE_NO_PROC ((MPI_Message)0x6c000000)
 
+/* Predefined request handle */
+#define MPIQ_REQUEST_IDLE ((MPI_Request)0x2f000000)
+
 /* Results of the compare operations. */
 #define MPI_IDENT     0
 #define MPI_CONGRUENT 1

@@ -62,13 +62,13 @@ int MPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int t
 	      MPI_Comm comm, MPI_Request *request)
 {
     int mpi_errno = MPI_SUCCESS;
+    int cs_enter_success = 0;
     MPIR_Comm *comm_ptr = NULL;
     MPIR_Request *request_ptr = NULL;
     MPIR_FUNC_TERSE_STATE_DECL(MPID_STATE_MPI_ISEND);
 
     MPIR_ERRTEST_INITIALIZED_ORDIE();
     
-    MPID_THREAD_CS_ENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX);
     MPIR_FUNC_TERSE_PT2PT_ENTER_FRONT(MPID_STATE_MPI_ISEND);
 
     /* Validate handle parameters needing to be converted */
@@ -81,7 +81,7 @@ int MPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int t
         MPID_END_ERROR_CHECKS;
     }
 #   endif /* HAVE_ERROR_CHECKING */
-    
+    /* TODO: Issue an acquire memory fence? */
     /* Convert MPI object handles to object pointers */
     MPIR_Comm_get_ptr( comm, comm_ptr );
 
@@ -122,23 +122,79 @@ int MPI_Isend(const void *buf, int count, MPI_Datatype datatype, int dest, int t
 
     /* ... body of routine ...  */
     
+#if !defined(MPIQ_QUEUE_MODEL)
+    while (!cs_enter_success)
+        MPID_THREAD_CS_TRYENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX, cs_enter_success);
+
     mpi_errno = MPID_Isend(buf, count, datatype, dest, tag, comm_ptr,
 			   MPIR_CONTEXT_INTRA_PT2PT, &request_ptr);
     if (mpi_errno != MPI_SUCCESS) goto fn_fail;
-
     MPII_SENDQ_REMEMBER(request_ptr,dest,tag,comm_ptr->context_id);
-
     /* return the handle of the request to the user */
     /* MPIU_OBJ_HANDLE_PUBLISH is unnecessary for isend, lower-level access is
      * responsible for its own consistency, while upper-level field access is
      * controlled by the completion counter */
     *request = request_ptr->handle;
+#else
+    MPID_THREAD_CS_TRYENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX, cs_enter_success);
+    if (cs_enter_success) {
+        /* Got the lock: progress all pending ops */
+        /* First flush what's in the queue in FIFO order */
+        MPIQ_pt2pt_elemt_t* pt2pt_elemt = NULL;
+        zm_glqueue_dequeue(&comm_ptr->pend_ops_q, (void**)&pt2pt_elemt);
+        while(pt2pt_elemt != NULL) {
+            switch(pt2pt_elemt->op) {
+                case MPIQ_ISEND:
+                    mpi_errno = MPID_Isend( pt2pt_elemt->buf,
+                                            pt2pt_elemt->count,
+                                            pt2pt_elemt->datatype,
+                                            pt2pt_elemt->rank,
+                                            pt2pt_elemt->tag,
+                                            comm_ptr,
+                                            MPIR_CONTEXT_INTRA_PT2PT,
+                                            &request_ptr);
+                    if (mpi_errno != MPI_SUCCESS) goto fn_fail;
+                    MPII_SENDQ_REMEMBER(request_ptr,pt2pt_elemt->rank,pt2pt_elemt->tag,comm_ptr->context_id);
+                    *pt2pt_elemt->request = request_ptr->handle;
+            }
+            MPID_Free_mem(pt2pt_elemt);
+            zm_glqueue_dequeue(&comm_ptr->pend_ops_q, (void**)&pt2pt_elemt);
+        }
+        /* Issue my own operation */
+        mpi_errno = MPID_Isend(buf, count, datatype, dest, tag, comm_ptr,
+                               MPIR_CONTEXT_INTRA_PT2PT, &request_ptr);
+        if (mpi_errno != MPI_SUCCESS) goto fn_fail;
+        MPII_SENDQ_REMEMBER(request_ptr,dest,tag,comm_ptr->context_id);
+       /* return the handle of the request to the user */
+       /* MPIU_OBJ_HANDLE_PUBLISH is unnecessary for isend, lower-level access is
+        * responsible for its own consistency, while upper-level field access is
+        * controlled by the completion counter */
+        *request = request_ptr->handle;
+    } else {
+        /* Failed to acquire the lock: enqueue my work */
+        /* First return to the user a handle different from MPI_REQUEST_NULL */
+        *request = MPIQ_REQUEST_IDLE;
+        MPIQ_pt2pt_elemt_t* pt2pt_elemt = NULL;
+        pt2pt_elemt = MPID_Alloc_mem(sizeof *pt2pt_elemt, NULL);
+        pt2pt_elemt->op       = MPIQ_ISEND;
+        pt2pt_elemt->buf      = buf;
+        pt2pt_elemt->count    = count;
+        pt2pt_elemt->datatype = datatype;
+        pt2pt_elemt->rank     = dest;
+        pt2pt_elemt->tag      = tag;
+        pt2pt_elemt->request  = request;
+        zm_glqueue_enqueue(&comm_ptr->pend_ops_q, pt2pt_elemt);
+    }
+#endif
 
     /* ... end of body of routine ... */
     
   fn_exit:
     MPIR_FUNC_TERSE_PT2PT_EXIT(MPID_STATE_MPI_ISEND);
-    MPID_THREAD_CS_EXIT(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX);
+#if defined(MPIQ_QUEUE_MODEL)
+    if(cs_enter_success)
+#endif
+        MPID_THREAD_CS_EXIT(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX);
     return mpi_errno;
     
   fn_fail:

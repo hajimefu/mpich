@@ -350,6 +350,36 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
     MPID_THREAD_CS_ENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX);
     MPIR_FUNC_TERSE_PT2PT_ENTER(MPID_STATE_MPI_WAITALL);
 
+#if defined(MPIQ_QUEUE_MODEL)
+    /*FIXME: find a better way to store pending ops. Currently COMM_WORLD is their home. */
+    MPIR_Request *request_ptr = NULL;
+    MPIR_Comm *comm_ptr = NULL;
+    MPIR_Comm_get_ptr( MPI_COMM_WORLD, comm_ptr );
+
+    /* Got the lock: progress all pending ops */
+    /* First flush what's in the queue in FIFO order */
+    MPIQ_pt2pt_elemt_t* pt2pt_elemt = NULL;
+    zm_glqueue_dequeue(&comm_ptr->pend_ops_q, (void**)&pt2pt_elemt);
+    while(pt2pt_elemt != NULL) {
+        switch(pt2pt_elemt->op) {
+            case MPIQ_ISEND:
+                mpi_errno = MPID_Isend( pt2pt_elemt->buf,
+                                        pt2pt_elemt->count,
+                                        pt2pt_elemt->datatype,
+                                        pt2pt_elemt->rank,
+                                        pt2pt_elemt->tag,
+                                        comm_ptr,
+                                        MPIR_CONTEXT_INTRA_PT2PT,
+                                        &request_ptr);
+                if (mpi_errno != MPI_SUCCESS) goto fn_fail;
+                MPII_SENDQ_REMEMBER(request_ptr,pt2pt_elemt->rank,pt2pt_elemt->tag,comm_ptr->context_id);
+                *pt2pt_elemt->request = request_ptr->handle;
+        }
+        MPID_Free_mem(pt2pt_elemt);
+        zm_glqueue_dequeue(&comm_ptr->pend_ops_q, (void**)&pt2pt_elemt);
+    }
+#endif
+
     /* Check the arguments */
 #   ifdef HAVE_ERROR_CHECKING
     {

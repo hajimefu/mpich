@@ -69,6 +69,26 @@ int MPIR_Comm_map_dup(struct MPIR_Comm *newcomm, struct MPIR_Comm *src_comm,
                       MPIR_Comm_map_dir_t dir);
 int MPIR_Comm_map_free(struct MPIR_Comm *comm);
 
+#if defined(MPIQ_QUEUE_MODEL)
+#include <queue/zm_glqueue.h>
+
+typedef enum MPIQ_pt2pt_op MPIQ_pt2pt_op_t;
+typedef struct MPIQ_pt2pt_elemt MPIQ_pt2pt_elemt_t;
+
+enum MPIQ_pt2pt_op {MPIQ_ISEND, MPIQ_IRECV};
+
+struct MPIQ_pt2pt_elemt {
+    MPIQ_pt2pt_op_t op;
+    const void *buf;
+    MPI_Aint count;
+    MPI_Datatype datatype;
+    int rank;
+    int tag;
+    MPI_Request *request;
+};
+#endif
+
+
 /*S
   MPIR_Comm - Description of the Communicator data structure
 
@@ -198,6 +218,11 @@ struct MPIR_Comm {
 #ifdef MPID_DEV_COMM_DECL
     MPID_DEV_COMM_DECL
 #endif
+#if defined(MPIQ_QUEUE_MODEL)
+    /* Queue for saving pending operations to issue */
+    zm_glqueue_t pend_ops_q;
+#endif
+
 };
 extern MPIR_Object_alloc_t MPIR_Comm_mem;
 
