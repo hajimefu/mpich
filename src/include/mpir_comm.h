@@ -79,7 +79,8 @@ enum MPIQ_pt2pt_op {MPIQ_ISEND, MPIQ_IRECV};
 
 struct MPIQ_pt2pt_elemt {
     MPIQ_pt2pt_op_t op;
-    const void *buf;
+    const void *send_buf;
+    void *recv_buf;
     MPI_Aint count;
     MPI_Datatype datatype;
     int rank;

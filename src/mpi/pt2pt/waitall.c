@@ -363,7 +363,7 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
     while(pt2pt_elemt != NULL) {
         switch(pt2pt_elemt->op) {
             case MPIQ_ISEND:
-                mpi_errno = MPID_Isend( pt2pt_elemt->buf,
+                mpi_errno = MPID_Isend( pt2pt_elemt->send_buf,
                                         pt2pt_elemt->count,
                                         pt2pt_elemt->datatype,
                                         pt2pt_elemt->rank,
@@ -374,6 +374,17 @@ int MPI_Waitall(int count, MPI_Request array_of_requests[],
                 if (mpi_errno != MPI_SUCCESS) goto fn_fail;
                 MPII_SENDQ_REMEMBER(request_ptr,pt2pt_elemt->rank,pt2pt_elemt->tag,comm_ptr->context_id);
                 *pt2pt_elemt->request = request_ptr->handle;
+            case MPIQ_IRECV:
+                mpi_errno = MPID_Irecv( pt2pt_elemt->recv_buf,
+                                        pt2pt_elemt->count,
+                                        pt2pt_elemt->datatype,
+                                        pt2pt_elemt->rank,
+                                        pt2pt_elemt->tag,
+                                        comm_ptr,
+                                        MPIR_CONTEXT_INTRA_PT2PT,
+                                        &request_ptr);
+                *pt2pt_elemt->request = request_ptr->handle;
+                if (mpi_errno != MPI_SUCCESS) goto fn_fail;
         }
         MPID_Free_mem(pt2pt_elemt);
         zm_glqueue_dequeue(&comm_ptr->pend_ops_q, (void**)&pt2pt_elemt);

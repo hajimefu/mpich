@@ -63,13 +63,13 @@ int MPI_Irecv(void *buf, int count, MPI_Datatype datatype, int source,
 {
     static const char FCNAME[] = "MPI_Irecv";
     int mpi_errno = MPI_SUCCESS;
+    int cs_enter_success = 0;
     MPIR_Comm *comm_ptr = NULL;
     MPIR_Request *request_ptr = NULL;
     MPIR_FUNC_TERSE_STATE_DECL(MPID_STATE_MPI_IRECV);
 
     MPIR_ERRTEST_INITIALIZED_ORDIE();
     
-    MPID_THREAD_CS_ENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX);
     MPIR_FUNC_TERSE_PT2PT_ENTER_BACK(MPID_STATE_MPI_IRECV);
 
     /* Validate handle parameters needing to be converted */
@@ -122,7 +122,11 @@ int MPI_Irecv(void *buf, int count, MPI_Datatype datatype, int source,
 #   endif /* HAVE_ERROR_CHECKING */
 
     /* ... body of routine ...  */
-    
+
+#if !defined(MPIQ_QUEUE_MODEL)
+    while (!cs_enter_success)
+        MPID_THREAD_CS_TRYENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX, cs_enter_success);
+
     mpi_errno = MPID_Irecv(buf, count, datatype, source, tag, comm_ptr, 
 			   MPIR_CONTEXT_INTRA_PT2PT, &request_ptr);
     /* return the handle of the request to the user */
@@ -137,11 +141,73 @@ int MPI_Irecv(void *buf, int count, MPI_Datatype datatype, int source,
      * their request value, but that's fine since the definition is
      * undefined anyway. */
     if (mpi_errno != MPI_SUCCESS) goto fn_fail;
+#else
+    MPID_THREAD_CS_TRYENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX, cs_enter_success);
+    if (cs_enter_success) {
+        /* Got the lock: progress all pending ops */
+        /* First flush what's in the queue in FIFO order */
+        MPIQ_pt2pt_elemt_t* pt2pt_elemt = NULL;
+        zm_glqueue_dequeue(&comm_ptr->pend_ops_q, (void**)&pt2pt_elemt);
+        while(pt2pt_elemt != NULL) {
+            switch(pt2pt_elemt->op) {
+                case MPIQ_ISEND:
+                    mpi_errno = MPID_Isend( pt2pt_elemt->send_buf,
+                                            pt2pt_elemt->count,
+                                            pt2pt_elemt->datatype,
+                                            pt2pt_elemt->rank,
+                                            pt2pt_elemt->tag,
+                                            comm_ptr,
+                                            MPIR_CONTEXT_INTRA_PT2PT,
+                                            &request_ptr);
+                    if (mpi_errno != MPI_SUCCESS) goto fn_fail;
+                    MPII_SENDQ_REMEMBER(request_ptr,pt2pt_elemt->rank,pt2pt_elemt->tag,comm_ptr->context_id);
+                    *pt2pt_elemt->request = request_ptr->handle;
+                case MPIQ_IRECV:
+                    mpi_errno = MPID_Irecv( pt2pt_elemt->recv_buf,
+                                            pt2pt_elemt->count,
+                                            pt2pt_elemt->datatype,
+                                            pt2pt_elemt->rank,
+                                            pt2pt_elemt->tag,
+                                            comm_ptr,
+                                            MPIR_CONTEXT_INTRA_PT2PT,
+                                            &request_ptr);
+                    *pt2pt_elemt->request = request_ptr->handle;
+                    if (mpi_errno != MPI_SUCCESS) goto fn_fail;
+            }
+            MPID_Free_mem(pt2pt_elemt);
+            zm_glqueue_dequeue(&comm_ptr->pend_ops_q, (void**)&pt2pt_elemt);
+        }
+        /* Issue my own operation */
+        mpi_errno = MPID_Irecv(buf, count, datatype, source, tag, comm_ptr, 
+			   MPIR_CONTEXT_INTRA_PT2PT, &request_ptr);
+        *request = request_ptr->handle;
+
+        if (mpi_errno != MPI_SUCCESS) goto fn_fail;
+    } else {
+        /* Failed to acquire the lock: enqueue my work */
+        /* First return to the user a handle different from MPI_REQUEST_NULL */
+        *request = MPIQ_REQUEST_IDLE;
+        MPIQ_pt2pt_elemt_t* pt2pt_elemt = NULL;
+        pt2pt_elemt = MPID_Alloc_mem(sizeof *pt2pt_elemt, NULL);
+        pt2pt_elemt->op       = MPIQ_IRECV;
+        pt2pt_elemt->send_buf = NULL;
+        pt2pt_elemt->recv_buf = buf;
+        pt2pt_elemt->count    = count;
+        pt2pt_elemt->datatype = datatype;
+        pt2pt_elemt->rank     = source;
+        pt2pt_elemt->tag      = tag;
+        pt2pt_elemt->request  = request;
+        zm_glqueue_enqueue(&comm_ptr->pend_ops_q, pt2pt_elemt);
+    }
+#endif
 
     /* ... end of body of routine ... */
     
   fn_exit:
     MPIR_FUNC_TERSE_PT2PT_EXIT_BACK(MPID_STATE_MPI_IRECV);
+#if defined(MPIQ_QUEUE_MODEL)
+    if(cs_enter_success)
+#endif
     MPID_THREAD_CS_EXIT(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX);
     return mpi_errno;
 
