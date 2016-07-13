@@ -138,8 +138,7 @@ int MPI_Put(const void *origin_addr, int origin_count, MPI_Datatype
 
     /* ... body of routine ...  */
 #if !defined(MPIQ_QUEUE_MODEL)
-    while (!cs_enter_success)
-        MPID_THREAD_CS_TRYENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX, cs_enter_success);
+    MPID_THREAD_CS_ENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX);
     
     mpi_errno = MPID_Put(origin_addr, origin_count, origin_datatype,
                          target_rank, target_disp, target_count,

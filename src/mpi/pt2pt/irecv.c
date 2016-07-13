@@ -124,8 +124,7 @@ int MPI_Irecv(void *buf, int count, MPI_Datatype datatype, int source,
     /* ... body of routine ...  */
 
 #if !defined(MPIQ_QUEUE_MODEL)
-    while (!cs_enter_success)
-        MPID_THREAD_CS_TRYENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX, cs_enter_success);
+    MPID_THREAD_CS_ENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX);
 
     mpi_errno = MPID_Irecv(buf, count, datatype, source, tag, comm_ptr, 
 			   MPIR_CONTEXT_INTRA_PT2PT, &request_ptr);
