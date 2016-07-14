@@ -2145,6 +2145,21 @@ int PMPI_Type_get_extent_x(MPI_Datatype datatype, MPI_Count *lb, MPI_Count *exte
 int PMPI_Type_get_true_extent_x(MPI_Datatype datatype, MPI_Count *lb, MPI_Count *extent);
 int PMPI_Type_size_x(MPI_Datatype datatype, MPI_Count *size);
 
+/* Work queue profiling stuff */
+extern double MPIQ_pt2pt_enqueue_time;
+extern double MPIQ_pt2pt_progress_time;
+extern double MPIQ_pt2pt_issue_pend_time;
+extern double MPIQ_rma_enqueue_time;
+extern double MPIQ_rma_progress_time;
+extern double MPIQ_rma_issue_pend_time;
+
+static inline double MPIQ_get_pt2pt_enqueue_time()      { return MPIQ_pt2pt_enqueue_time; }
+static inline double MPIQ_get_pt2pt_progress_time()     { return MPIQ_pt2pt_progress_time; }
+static inline double MPIQ_get_pt2pt_issue_pend_time()   { return MPIQ_pt2pt_issue_pend_time; }
+static inline double MPIQ_get_rma_enqueue_time()        { return MPIQ_rma_enqueue_time; }
+static inline double MPIQ_get_rma_progress_time()       { return MPIQ_rma_progress_time; }
+static inline double MPIQ_get_rma_issue_pend_time()     { return MPIQ_rma_issue_pend_time; }
+
 /* MPI_Aint addressing arithmetic */
 MPI_Aint PMPI_Aint_add(MPI_Aint base, MPI_Aint disp);
 MPI_Aint PMPI_Aint_diff(MPI_Aint addr1, MPI_Aint addr2);

@@ -10,7 +10,7 @@
 
 #if defined(MPIQ_QUEUE_MODEL)
 
-/* First define the queue implementation type */
+/* Define the queue implementation type */
 #if defined(MPIQ_USE_MSQUEUE)
 #include <queue/zm_msqueue.h>
 #define MPIQ_queue_t       zm_msqueue_t
@@ -65,6 +65,68 @@ struct MPIQ_rma_elemt {
 extern MPIQ_queue_t MPIQ_pt2pt_pend_ops;
 extern MPIQ_queue_t MPIQ_rma_pend_ops;
 
+/* For profiling */
+extern double MPIQ_pt2pt_enqueue_time;
+extern double MPIQ_pt2pt_progress_time;
+extern double MPIQ_pt2pt_issue_pend_time;
+extern double MPIQ_rma_enqueue_time;
+extern double MPIQ_rma_progress_time;
+extern double MPIQ_rma_issue_pend_time;
+
+#if defined(MPIQ_WORKQ_PROFILE)
+#define MPIQ_WORKQ_PT2PT_ENQUEUE_START  double enqueue_t1 = MPI_Wtime();
+#define MPIQ_WORKQ_PT2PT_ENQUEUE_STOP                           \
+do {                                                            \
+    double enqueue_t2 = MPI_Wtime();                            \
+    MPIQ_pt2pt_enqueue_time += (enqueue_t2 - enqueue_t1);       \
+}while(0)
+#define MPIQ_WORKQ_PT2PT_PROGRESS_START double progress_t1 = MPI_Wtime();
+#define MPIQ_WORKQ_PT2PT_PROGRESS_STOP                          \
+do {                                                            \
+    double progress_t2 = MPI_Wtime();                           \
+    MPIQ_pt2pt_progress_time += (progress_t2 - progress_t1);    \
+}while(0)
+#define MPIQ_WORKQ_PT2PT_ISSUE_START    double issue_t1 = MPI_Wtime();
+#define MPIQ_WORKQ_PT2PT_ISSUE_STOP                             \
+do {                                                            \
+    double issue_t2 = MPI_Wtime();                              \
+    MPIQ_pt2pt_issue_pend_time += (issue_t2 - issue_t1);        \
+}while(0)
+
+#define MPIQ_WORKQ_RMA_ENQUEUE_START    double enqueue_t1 = MPI_Wtime();
+#define MPIQ_WORKQ_RMA_ENQUEUE_STOP                             \
+do {                                                            \
+    double enqueue_t2 = MPI_Wtime();                            \
+    MPIQ_rma_enqueue_time += (enqueue_t2 - enqueue_t1);         \
+}while(0)
+#define MPIQ_WORKQ_RMA_PROGRESS_START   double progress_t1 = MPI_Wtime();
+#define MPIQ_WORKQ_RMA_PROGRESS_STOP                            \
+do {                                                            \
+    double progress_t2 = MPI_Wtime();                           \
+    MPIQ_rma_progress_time += (progress_t2 - progress_t1);      \
+}while(0)
+#define MPIQ_WORKQ_RMA_ISSUE_START      double issue_t1 = MPI_Wtime();
+#define MPIQ_WORKQ_RMA_ISSUE_STOP                               \
+do {                                                            \
+    double issue_t2 = MPI_Wtime();                              \
+    MPIQ_rma_issue_pend_time += (issue_t2 - issue_t1);          \
+}while(0)
+#else /*!defined(MPIQ_WORKQ_PROFILE)*/
+#define MPIQ_WORKQ_PT2PT_ENQUEUE_START
+#define MPIQ_WORKQ_PT2PT_ENQUEUE_STOP
+#define MPIQ_WORKQ_PT2PT_PROGRESS_START
+#define MPIQ_WORKQ_PT2PT_PROGRESS_STOP
+#define MPIQ_WORKQ_PT2PT_ISSUE_START
+#define MPIQ_WORKQ_PT2PT_ISSUE_STOP
+
+#define MPIQ_WORKQ_RMA_ENQUEUE_START
+#define MPIQ_WORKQ_RMA_ENQUEUE_STOP 
+#define MPIQ_WORKQ_RMA_PROGRESS_START
+#define MPIQ_WORKQ_RMA_PROGRESS_STOP
+#define MPIQ_WORKQ_RMA_ISSUE_START    
+#define MPIQ_WORKQ_PT2PT_ISSUE_STOP
+#endif
+
 static inline void MPIQ_workq_pt2pt_enqueue_body(MPIQ_pt2pt_op_t op,
                                             const void *send_buf,
                                             void *recv_buf,
@@ -116,8 +178,10 @@ static inline int MPIQ_workq_pt2pt_progress() {
     int mpi_errno = MPI_SUCCESS;
     MPIR_Request *request_ptr = NULL;
     MPIQ_pt2pt_elemt_t* pt2pt_elemt = NULL;
+    MPIQ_WORKQ_PT2PT_PROGRESS_START;
     MPIQ_queue_dequeue(&MPIQ_pt2pt_pend_ops, (void**)&pt2pt_elemt);
     while(pt2pt_elemt != NULL) {
+        MPIQ_WORKQ_PT2PT_ISSUE_START;
         switch(pt2pt_elemt->op) {
             case MPIQ_ISEND:
                 mpi_errno = MPID_Isend( pt2pt_elemt->send_buf,
@@ -143,9 +207,11 @@ static inline int MPIQ_workq_pt2pt_progress() {
                 *pt2pt_elemt->request = request_ptr->handle;
                 if (mpi_errno != MPI_SUCCESS) goto fn_fail;
         }
+        MPIQ_WORKQ_PT2PT_ISSUE_STOP;
         MPID_Free_mem(pt2pt_elemt);
         MPIQ_queue_dequeue(&MPIQ_pt2pt_pend_ops, (void**)&pt2pt_elemt);
     }
+    MPIQ_WORKQ_PT2PT_PROGRESS_STOP;
   fn_fail:
     return mpi_errno;
 }
@@ -153,8 +219,10 @@ static inline int MPIQ_workq_pt2pt_progress() {
 static inline int MPIQ_workq_rma_progress() {
     int mpi_errno = MPI_SUCCESS;
     MPIQ_rma_elemt_t* rma_elemt = NULL;
+    MPIQ_WORKQ_RMA_PROGRESS_START;
     MPIQ_queue_dequeue(&MPIQ_rma_pend_ops, (void**)&rma_elemt);
     while(rma_elemt != NULL) {
+        MPIQ_WORKQ_RMA_ISSUE_START;
         switch(rma_elemt->op) {
             case MPIQ_PUT:
                 mpi_errno = MPID_Put(rma_elemt->origin_addr,
@@ -167,9 +235,11 @@ static inline int MPIQ_workq_rma_progress() {
                                      rma_elemt->win_ptr);
                 if (mpi_errno != MPI_SUCCESS) goto fn_fail;
         }
+        MPIQ_WORKQ_RMA_ISSUE_STOP;
         MPID_Free_mem(rma_elemt);
         MPIQ_queue_dequeue(&MPIQ_rma_pend_ops, (void**)&rma_elemt);
     }
+    MPIQ_WORKQ_RMA_PROGRESS_STOP;
   fn_fail:
     return mpi_errno;
 }
@@ -192,9 +262,10 @@ static inline void MPIQ_workq_pt2pt_enqueue(MPIQ_pt2pt_op_t op,
                                             int tag,
                                             MPIR_Comm *comm_ptr,
                                             MPI_Request *request) {
+    MPIQ_WORKQ_PT2PT_ENQUEUE_START;
     MPIQ_workq_pt2pt_enqueue_body(op, send_buf, recv_buf, count, datatype,
                                   rank, tag, comm_ptr, request);
-
+    MPIQ_WORKQ_PT2PT_ENQUEUE_STOP;
 }
 
 static inline void MPIQ_workq_rma_enqueue(MPIQ_rma_op_t op,
@@ -206,8 +277,10 @@ static inline void MPIQ_workq_rma_enqueue(MPIQ_rma_op_t op,
                                           int target_count,
                                           MPI_Datatype target_datatype,
                                           MPIR_Win *win_ptr) {
+    MPIQ_WORKQ_RMA_ENQUEUE_START;
     MPIQ_workq_rma_enqueue_body(op, origin_addr, origin_count, origin_datatype, target_rank,
                                 target_disp, target_count, target_datatype, win_ptr);
+    MPIQ_WORKQ_RMA_ENQUEUE_STOP;
 }
 
 static inline int MPIQ_workq_global_progress() {

@@ -186,6 +186,15 @@ MPIQ_queue_t MPIQ_pt2pt_pend_ops;
 MPIQ_queue_t MPIQ_rma_pend_ops;
 #endif
 
+/* For profiling */
+double MPIQ_pt2pt_enqueue_time = 0.0;
+double MPIQ_pt2pt_progress_time = 0.0;
+double MPIQ_pt2pt_issue_pend_time = 0.0;
+
+double MPIQ_rma_enqueue_time = 0.0;
+double MPIQ_rma_progress_time = 0.0;
+double MPIQ_rma_issue_pend_time = 0.0;
+
 /* These routine handle any thread initialization that my be required */
 #undef FUNCNAME
 #define FUNCNAME thread_cs_init
