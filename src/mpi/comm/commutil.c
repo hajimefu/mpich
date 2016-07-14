@@ -108,9 +108,6 @@ int MPII_Comm_init(MPIR_Comm * comm_p)
     MPID_Thread_mutex_create(&MPIR_THREAD_POBJ_COMM_MUTEX(comm_p), &thr_err);
     MPIR_Assert(thr_err == 0);
 #endif
-#if defined(MPIQ_QUEUE_MODEL)
-    zm_glqueue_init(&comm_p->pend_ops_q);
-#endif
     /* Fields not set include context_id, remote and local size, and
      * kind, since different communicator construction routines need
      * different values */

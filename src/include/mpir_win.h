@@ -8,26 +8,6 @@
 #ifndef MPIR_WIN_H_INCLUDED
 #define MPIR_WIN_H_INCLUDED
 
-#if defined(MPIQ_QUEUE_MODEL)
-#include <queue/zm_glqueue.h>
-
-typedef enum MPIQ_rma_op MPIQ_rma_op_t;
-typedef struct MPIQ_rma_elemt MPIQ_rma_elemt_t;
-
-enum MPIQ_rma_op {MPIQ_PUT};
-
-struct MPIQ_rma_elemt {
-    MPIQ_rma_op_t op;
-    const void *origin_addr;
-    int origin_count;
-    MPI_Datatype origin_datatype;
-    int target_rank;
-    MPI_Aint target_disp;
-    int target_count;
-    MPI_Datatype target_datatype;
-};
-#endif
-
 /*S
   MPIR_Win - Description of the Window Object data structure.
 
@@ -101,10 +81,6 @@ struct MPIR_Win {
   /* Other, device-specific information */
 #ifdef MPID_DEV_WIN_DECL
     MPID_DEV_WIN_DECL
-#endif
-#if defined(MPIQ_QUEUE_MODEL)
-    /* Queue for saving pending operations to issue */
-    zm_glqueue_t pend_ops_q;
 #endif
 };
 extern MPIR_Object_alloc_t MPIR_Win_mem;

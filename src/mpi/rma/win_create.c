@@ -173,9 +173,6 @@ int MPI_Win_create(void *base, MPI_Aint size, int disp_unit, MPI_Info info,
     /* Initialize a few fields that have specific defaults */
     win_ptr->name[0]    = 0;
     win_ptr->errhandler = 0;
-#if defined(MPIQ_QUEUE_MODEL)
-    zm_glqueue_init(&win_ptr->pend_ops_q);
-#endif
 
     /* return the handle of the window object to the user */
     MPIR_OBJ_PUBLISH_HANDLE(*win, win_ptr->handle);

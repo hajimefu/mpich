@@ -74,7 +74,8 @@ noinst_HEADERS +=                   \
     src/include/pmi2.h              \
     src/include/rlog.h              \
     src/include/rlog_macros.h       \
-    src/include/mpir_op_util.h
+    src/include/mpir_op_util.h	    \
+    src/include/mpir_workq.h
 
 src/include/mpir_cvars.h:
 	$(top_srcdir)/maint/extractcvars --dirs="`cat $(top_srcdir)/maint/cvardirs`"

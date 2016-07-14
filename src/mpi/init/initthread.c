@@ -180,6 +180,12 @@ MPID_Thread_mutex_t MPIR_THREAD_POBJ_PMI_MUTEX;
 MPID_Thread_mutex_t MPIR_THREAD_POBJ_COLLOPS_MUTEX;
 #endif
 
+#if defined(MPIQ_QUEUE_MODEL)
+/* Global queues for saving pending operations to issue */
+MPIQ_queue_t MPIQ_pt2pt_pend_ops;
+MPIQ_queue_t MPIQ_rma_pend_ops;
+#endif
+
 /* These routine handle any thread initialization that my be required */
 #undef FUNCNAME
 #define FUNCNAME thread_cs_init
@@ -226,6 +232,11 @@ static int thread_cs_init( void )
     MPID_THREADPRIV_KEY_CREATE;
 
     MPL_DBG_MSG(MPIR_DBG_INIT,TYPICAL,"Created global mutex and private storage");
+
+#if defined(MPIQ_QUEUE_MODEL)
+    MPIQ_queue_init(&MPIQ_pt2pt_pend_ops);
+    MPIQ_queue_init(&MPIQ_rma_pend_ops);
+#endif
     return MPI_SUCCESS;
 }
 
