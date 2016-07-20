@@ -120,11 +120,11 @@ do {                                                            \
 #define MPIQ_WORKQ_PT2PT_ISSUE_STOP
 
 #define MPIQ_WORKQ_RMA_ENQUEUE_START
-#define MPIQ_WORKQ_RMA_ENQUEUE_STOP 
+#define MPIQ_WORKQ_RMA_ENQUEUE_STOP
 #define MPIQ_WORKQ_RMA_PROGRESS_START
 #define MPIQ_WORKQ_RMA_PROGRESS_STOP
-#define MPIQ_WORKQ_RMA_ISSUE_START    
-#define MPIQ_WORKQ_PT2PT_ISSUE_STOP
+#define MPIQ_WORKQ_RMA_ISSUE_START
+#define MPIQ_WORKQ_RMA_ISSUE_STOP
 #endif
 
 static inline void MPIQ_workq_pt2pt_enqueue_body(MPIQ_pt2pt_op_t op,
