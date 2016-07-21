@@ -195,6 +195,7 @@ static inline int MPIQ_workq_pt2pt_progress() {
                 if (mpi_errno != MPI_SUCCESS) goto fn_fail;
                 MPII_SENDQ_REMEMBER(request_ptr,pt2pt_elemt->rank,pt2pt_elemt->tag,comm_ptr->context_id);
                 *pt2pt_elemt->request = request_ptr->handle;
+                break;
             case MPIQ_IRECV:
                 mpi_errno = MPID_Irecv( pt2pt_elemt->recv_buf,
                                         pt2pt_elemt->count,
@@ -206,6 +207,7 @@ static inline int MPIQ_workq_pt2pt_progress() {
                                         &request_ptr);
                 *pt2pt_elemt->request = request_ptr->handle;
                 if (mpi_errno != MPI_SUCCESS) goto fn_fail;
+                break;
         }
         MPIQ_WORKQ_PT2PT_ISSUE_STOP;
         MPID_Free_mem(pt2pt_elemt);
@@ -234,6 +236,7 @@ static inline int MPIQ_workq_rma_progress() {
                                      rma_elemt->target_datatype,
                                      rma_elemt->win_ptr);
                 if (mpi_errno != MPI_SUCCESS) goto fn_fail;
+                break;
         }
         MPIQ_WORKQ_RMA_ISSUE_STOP;
         MPID_Free_mem(rma_elemt);
