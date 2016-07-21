@@ -144,6 +144,10 @@ int MPI_Wait(MPI_Request *request, MPI_Status *status)
     
     MPID_THREAD_CS_ENTER(GLOBAL, MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX);
     MPIR_FUNC_TERSE_PT2PT_ENTER(MPID_STATE_MPI_WAIT);
+#if defined(MPIQ_QUEUE_MODEL)
+    /* Make progress on the work queue */
+    MPIQ_workq_global_progress();
+#endif
 
     /* Check the arguments */
 #   ifdef HAVE_ERROR_CHECKING
