@@ -11,7 +11,13 @@
 #if defined(MPIQ_QUEUE_MODEL)
 
 /* Define the queue implementation type */
-#if defined(MPIQ_USE_MSQUEUE)
+#if defined(MPIQ_USE_NMQUEUE)
+#include <queue/zm_nmqueue.h>
+#define MPIQ_queue_t       zm_nmqueue_t
+#define MPIQ_queue_init    zm_nmqueue_init
+#define MPIQ_queue_enqueue zm_nmqueue_enqueue
+#define MPIQ_queue_dequeue zm_nmqueue_dequeue
+#elif defined(MPIQ_USE_MSQUEUE)
 #include <queue/zm_msqueue.h>
 #define MPIQ_queue_t       zm_msqueue_t
 #define MPIQ_queue_init    zm_msqueue_init
