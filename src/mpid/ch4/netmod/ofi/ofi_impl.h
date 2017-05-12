@@ -440,11 +440,22 @@ MPL_STATIC_INLINE_PREFIX fi_addr_t MPIDI_OFI_av_vni_to_phys(MPIDI_av_entry_t * a
     }
 }
 
+MPL_STATIC_INLINE_PREFIX fi_addr_t MPIDI_OFI_comm_vni_to_phys(MPIR_Comm * comm, int rank,
+                                                              int vni_idx)
+{
+    if (MPIDI_OFI_ENABLE_SCALABLE_ENDPOINTS) {
+        int rx_idx = vni_idx;
+        return fi_rx_addr(MPIDI_OFI_COMM_TO_PHYS(comm, rank), rx_idx, MPIDI_OFI_MAX_ENDPOINTS_BITS);
+    } else {
+        return MPIDI_OFI_COMM_TO_PHYS(comm, rank);
+    }
+}
+
 MPL_STATIC_INLINE_PREFIX fi_addr_t MPIDI_OFI_to_phys(int rank)
 {
     if (MPIDI_OFI_ENABLE_SCALABLE_ENDPOINTS) {
-        int ep_num = 0;
-        int rx_idx = ep_num;
+        int vni_num = 0;
+        int rx_idx = vni_num;
         return fi_rx_addr(MPIDI_OFI_TO_PHYS(0, rank), rx_idx, MPIDI_OFI_MAX_ENDPOINTS_BITS);
     } else {
         return MPIDI_OFI_TO_PHYS(0, rank);
