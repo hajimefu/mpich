@@ -69,7 +69,7 @@
 
 #define MPIDI_OFI_PROGRESS()                                      \
     do {                                                          \
-        mpi_errno = MPID_Progress_test();                        \
+        mpi_errno = MPIDI_NM_progress(0, 0);                      \
         if (mpi_errno!=MPI_SUCCESS) MPIR_ERR_POP(mpi_errno);      \
     } while (0)
 
@@ -234,6 +234,80 @@
         MPIDI_OFI_ssendack_request_t_tls_alloc(req);      \
     } while (0)
 
+MPL_STATIC_INLINE_PREFIX int MPIDI_OFI_need_request_creation(MPIR_Request *req)
+{
+    if (MPIDI_CH4_MT_MODEL == MPIDI_CH4_MT_TRYLOCK) {
+        return (req == NULL); /* Depends on upper layer */
+    } else if (MPIDI_CH4_MT_MODEL == MPIDI_CH4_MT_DIRECT) {
+        return 1; /* Always allocated by netmod */
+    } else if (MPIDI_CH4_MT_MODEL == MPIDI_CH4_MT_HANDOFF) {
+        return 0; /* Always allocated by CH4 */
+    } else {
+        /* Invalid MT model */
+        MPIR_Assert(0);
+        return -1;
+    }
+}
+
+/* Initial value of the completion counter of request objects for lightweight (injection) operations */
+MPL_STATIC_INLINE_PREFIX int MPIDI_OFI_lw_request_cc_val(void)
+{
+    if (MPIDI_CH4_MT_MODEL == MPIDI_CH4_MT_TRYLOCK) {
+        /* Note on CC initialization: this might be overkill when trylock succeeds
+           and the main thread directly issues injection.
+           However, at this moment we assume trylock always goes through progress thread
+           to simplify implementation. */
+        return 1;
+    } else if (MPIDI_CH4_MT_MODEL == MPIDI_CH4_MT_DIRECT) {
+        return 0;
+    } else if (MPIDI_CH4_MT_MODEL == MPIDI_CH4_MT_HANDOFF) {
+        return 1;
+    } else {
+       /* Invalid MT model */
+        MPIR_Assert(0);
+        return -1;
+    }
+}
+
+#define MPIDI_OFI_REQUEST_CREATE_CONDITIONAL(req, kind)                 \
+      do {                                                              \
+          if (MPIDI_OFI_need_request_creation(req)) {                   \
+              MPIR_Assert((req) == NULL);                               \
+              (req) = MPIR_Request_create(kind);                        \
+          }                                                             \
+          /* At this line we should always have a valid request */      \
+          MPIR_Assert((req) != NULL);                                   \
+          MPIR_Request_add_ref((req));                                  \
+      } while (0)
+
+#define MPIDI_OFI_SEND_REQUEST_CREATE_LW_CONDITIONAL(req)               \
+    do {                                                                \
+        if (MPIDI_CH4_MT_MODEL == MPIDI_CH4_MT_DIRECT) {                \
+            MPIDI_OFI_SEND_REQUEST_CREATE_LW(req);                      \
+        } else {                                                        \
+            if (MPIDI_OFI_need_request_creation(req)) {                 \
+                MPIR_Assert((req) == NULL);                             \
+                (req) = MPIR_Request_create(MPIR_REQUEST_KIND__SEND);   \
+            }                                                           \
+            /* At this line we should always have a valid request */    \
+            MPIR_Assert((req) != NULL);                                 \
+            /* Completing lightweight (injection) requests:             \
+               If a progess thread is issuing injection, we need to     \
+               keep CC>0 until the actual injection completes. */       \
+            MPIR_cc_set(&(req)->cc, MPIDI_OFI_lw_request_cc_val());     \
+        }                                                               \
+    } while (0)
+
+/* If we set CC>0 in case of injection, we need to decrement the CC
+   to tell the main thread we completed the injection. */
+#define MPIDI_OFI_SEND_REQUEST_COMPLETE_LW_CONDITIONAL(req) \
+    do {                                                    \
+        if (MPIDI_OFI_lw_request_cc_val()) {                \
+            int incomplete_;                                \
+            MPIR_cc_decr(&(req)->cc, &incomplete_);         \
+        }                                                   \
+    } while (0)
+
 #define WINFO(w,rank) MPIDI_CH4U_WINFO(w,rank)
 
 MPL_STATIC_INLINE_PREFIX uintptr_t MPIDI_OFI_winfo_base(MPIR_Win * w, int rank)
@@ -319,9 +393,19 @@ MPL_STATIC_INLINE_PREFIX fi_addr_t MPIDI_OFI_comm_to_phys(MPIR_Comm * comm, int 
 {
     if (MPIDI_OFI_ENABLE_SCALABLE_ENDPOINTS) {
         MPIDI_OFI_addr_t *av = &MPIDI_OFI_AV(MPIDIU_comm_rank_to_av(comm, rank));
-        int ep_num = MPIDI_OFI_av_to_ep(av);
+        int ep_num = comm->dev.vni_idx;
         int rx_idx = ep_num;
         return fi_rx_addr(MPIDI_OFI_AV_TO_PHYS(av), rx_idx, MPIDI_OFI_MAX_ENDPOINTS_BITS);
+    } else {
+        return MPIDI_OFI_COMM_TO_PHYS(comm, rank);
+    }
+}
+
+MPL_STATIC_INLINE_PREFIX fi_addr_t MPIDI_OFI_comm_vni_to_phys(MPIR_Comm * comm, int rank, int vni_idx)
+{
+    if (MPIDI_OFI_ENABLE_SCALABLE_ENDPOINTS) {
+        int rx_idx = vni_idx;
+        return fi_rx_addr(MPIDI_OFI_COMM_TO_PHYS(comm, rank), rx_idx, MPIDI_OFI_MAX_ENDPOINTS_BITS);
     } else {
         return MPIDI_OFI_COMM_TO_PHYS(comm, rank);
     }
@@ -330,8 +414,8 @@ MPL_STATIC_INLINE_PREFIX fi_addr_t MPIDI_OFI_comm_to_phys(MPIR_Comm * comm, int 
 MPL_STATIC_INLINE_PREFIX fi_addr_t MPIDI_OFI_to_phys(int rank)
 {
     if (MPIDI_OFI_ENABLE_SCALABLE_ENDPOINTS) {
-        int ep_num = 0;
-        int rx_idx = ep_num;
+        int vni_num = 0;
+        int rx_idx = vni_num;
         return fi_rx_addr(MPIDI_OFI_TO_PHYS(0, rank), rx_idx, MPIDI_OFI_MAX_ENDPOINTS_BITS);
     } else {
         return MPIDI_OFI_TO_PHYS(0, rank);

@@ -23,6 +23,30 @@
 #include "shmpre.h"
 #include "mpl_uthash.h"
 
+#ifdef MPIDI_CH4_USE_MT_DIRECT
+#  define MPIDI_CH4_MT_MODEL MPIDI_CH4_MT_DIRECT
+#elif defined MPIDI_CH4_USE_MT_HANDOFF
+#  define MPIDI_CH4_MT_MODEL MPIDI_CH4_MT_HANDOFF
+#elif defined MPIDI_CH4_USE_MT_TRYLOCK
+#  define MPIDI_CH4_MT_MODEL MPIDI_CH4_MT_TRYLOCK
+#elif defined MPIDI_CH4_USE_MT_RUNTIME
+#  define MPIDI_CH4_MT_MODEL MPIDI_CH4_Global.settings.mt_model
+#else
+#  error "Unknown MT model or MT model not defined"
+#endif
+
+#ifdef MPIDI_CH4_USE_WORKQ_ZM_MSQUEUE
+#  define MPIDI_CH4_WORKQ_TYPE MPIDI_CH4_WORKQ_ZM_MSQUEUE
+#elif defined MPIDI_CH4_USE_WORKQ_ZM_GLQUEUE
+#  define MPIDI_CH4_WORKQ_TYPE MPIDI_CH4_WORKQ_ZM_GLQUEUE
+#elif defined MPIDI_CH4_USE_WORKQ_RUNTIME
+#  define MPIDI_CH4_WORKQ_TYPE MPIDI_CH4_Global.settings.workq_type
+#else
+#  error "Unknown workqueue type or workqueue type not defined"
+#endif
+
+#include "ch4i_workq_types.h"
+
 typedef struct {
     union {
     MPIDI_NM_DT_DECL} netmod;
@@ -313,6 +337,9 @@ typedef struct {
     MPIDI_CH4U_win_t ch4u;
     union {
     MPIDI_NM_WIN_DECL} netmod;
+
+    int nqueues;
+    MPIDI_workq_list_t *work_queues;
 } MPIDI_Devwin_t;
 
 #define MPIDI_CH4U_WIN(win,field)        (((win)->dev.ch4u).field)
@@ -405,6 +432,10 @@ typedef struct MPIDI_Devcomm_t {
         MPIDI_rank_map_t map;
         MPIDI_rank_map_t local_map;
     } ch4;
+
+    int nqueues;
+    MPIDI_workq_list_t *work_queues;
+    int vni_idx;
 } MPIDI_Devcomm_t;
 #define MPIDI_CH4U_COMM(comm,field) ((comm)->dev.ch4.ch4u).field
 #define MPIDI_COMM(comm,field) ((comm)->dev.ch4).field
@@ -423,7 +454,7 @@ typedef struct {
 #define MPID_DEV_COMM_DECL       MPIDI_Devcomm_t dev;
 #define MPID_DEV_OP_DECL         MPIDI_Devop_t   dev;
 
-typedef struct {
+typedef struct MPIDI_av_entry {
     union {
     MPIDI_NM_ADDR_DECL} netmod;
 #ifdef MPIDI_BUILD_CH4_LOCALITY_INFO
