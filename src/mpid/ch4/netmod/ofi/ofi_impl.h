@@ -78,7 +78,7 @@
 
 #define MPIDI_OFI_CALL_LOCK 1
 #define MPIDI_OFI_CALL_NO_LOCK 0
-#define MPIDI_OFI_CALL_RETRY(FUNC,STR,LOCK,EAGAIN)          \
+#define MPIDI_OFI_CALL_RETRY(FUNC,STR,VNI_IDX,LOCK,EAGAIN)  \
     do {                                                    \
     ssize_t _ret;                                           \
     int _retry = MPIR_CVAR_CH4_OFI_MAX_EAGAIN_RETRY;        \
@@ -104,7 +104,7 @@
                             "**eagain");                    \
         if (LOCK == MPIDI_OFI_CALL_NO_LOCK)                 \
             MPID_THREAD_CS_EXIT(POBJ,MPIDI_OFI_THREAD_FI_MUTEX);     \
-        mpi_errno = MPIDI_OFI_retry_progress();                      \
+        mpi_errno = MPIDI_OFI_retry_progress(VNI_IDX);               \
         if (mpi_errno != MPI_SUCCESS)                                \
             MPIR_ERR_POP(mpi_errno);                                 \
         if (LOCK == MPIDI_OFI_CALL_NO_LOCK)                 \
@@ -113,7 +113,7 @@
     } while (_ret == -FI_EAGAIN);                           \
     } while (0)
 
-#define MPIDI_OFI_CALL_RETRY2(FUNC1,FUNC2,STR)                       \
+#define MPIDI_OFI_CALL_RETRY2(FUNC1,FUNC2,STR,VNI_IDX)      \
     do {                                                    \
     ssize_t _ret;                                           \
     MPID_THREAD_CS_ENTER(POBJ,MPIDI_OFI_THREAD_FI_MUTEX);       \
@@ -131,7 +131,7 @@
                               __LINE__,                     \
                               FCNAME,                       \
                               fi_strerror(-_ret));          \
-        mpi_errno = MPIDI_OFI_retry_progress();                      \
+        mpi_errno = MPIDI_OFI_retry_progress(VNI_IDX);      \
         if (mpi_errno != MPI_SUCCESS)                                \
             MPIR_ERR_POP(mpi_errno);                                 \
         MPID_THREAD_CS_ENTER(POBJ,MPIDI_OFI_THREAD_FI_MUTEX);   \
@@ -313,7 +313,7 @@ MPL_STATIC_INLINE_PREFIX void MPIDI_OFI_cntr_incr()
 
 /* Externs:  see util.c for definition */
 int MPIDI_OFI_handle_cq_error_util(int ep_idx, ssize_t ret);
-int MPIDI_OFI_retry_progress(void);
+int MPIDI_OFI_retry_progress(int vni_idx);
 int MPIDI_OFI_control_handler(int handler_id, void *am_hdr,
                               void **data, size_t * data_sz, int *is_contig,
                               MPIDIG_am_target_cmpl_cb * target_cmpl_cb, MPIR_Request ** req);
@@ -536,25 +536,25 @@ MPL_STATIC_INLINE_PREFIX MPIR_Request *MPIDI_OFI_context_to_request(void *contex
 #define FCNAME MPL_QUOTE(FUNCNAME)
 MPL_STATIC_INLINE_PREFIX int MPIDI_OFI_send_handler(struct fid_ep *ep, const void *buf, size_t len,
                                                     void *desc, uint32_t src, fi_addr_t dest_addr,
-                                                    uint64_t tag, void *context, int is_inject,
-                                                    int do_lock, int do_eagain)
+                                                    int vni_idx, uint64_t tag, void *context,
+                                                    int is_inject, int do_lock, int do_eagain)
 {
     int mpi_errno = MPI_SUCCESS;
 
     if (is_inject) {
         if (MPIDI_OFI_ENABLE_DATA)
             MPIDI_OFI_CALL_RETRY(fi_tinjectdata(ep, buf, len, src, dest_addr, tag), tinjectdata,
-                                 do_lock, do_eagain);
+                                 vni_idx, do_lock, do_eagain);
         else
-            MPIDI_OFI_CALL_RETRY(fi_tinject(ep, buf, len, dest_addr, tag), tinject, do_lock,
-                                 do_eagain);
+            MPIDI_OFI_CALL_RETRY(fi_tinject(ep, buf, len, dest_addr, tag), tinject, vni_idx,
+                                 do_lock, do_eagain);
     } else {
         if (MPIDI_OFI_ENABLE_DATA)
             MPIDI_OFI_CALL_RETRY(fi_tsenddata(ep, buf, len, desc, src, dest_addr, tag, context),
-                                 tsenddata, do_lock, do_eagain);
+                                 tsenddata, vni_idx, do_lock, do_eagain);
         else
             MPIDI_OFI_CALL_RETRY(fi_tsend(ep, buf, len, desc, dest_addr, tag, context), tsend,
-                                 do_lock, do_eagain);
+                                 vni_idx, do_lock, do_eagain);
     }
 
   fn_exit:
@@ -659,7 +659,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_OFI_dynproc_send_disconnect(int conn_id)
         MPIDI_OFI_CALL_RETRY(fi_tsendmsg(MPIDI_Global.ctx[0].tx, &msg,
                                          FI_COMPLETION | FI_TRANSMIT_COMPLETE |
                                          (MPIDI_OFI_ENABLE_DATA ? FI_REMOTE_CQ_DATA : 0)), tsendmsg,
-                             MPIDI_OFI_CALL_LOCK, FALSE);
+                             0 /* vni_idx */ , MPIDI_OFI_CALL_LOCK, FALSE);
         MPIDI_OFI_PROGRESS_WHILE(!req.done);
     }
 

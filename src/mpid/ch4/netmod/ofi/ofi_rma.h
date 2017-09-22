@@ -386,7 +386,7 @@ static inline int MPIDI_OFI_do_put(const void *origin_addr,
         msg.rma_iov = targetv;
         msg.rma_iov_count = tout;
         MPIDI_OFI_CALL_RETRY2(MPIDI_OFI_INIT_CHUNK_CONTEXT(win, vni_idx, sigreq),
-                              fi_writemsg(ep, &msg, flags), rdma_write);
+                              fi_writemsg(ep, &msg, flags), rdma_write, 0 /* vni_idx */);
     }
 
   fn_exit:
@@ -461,7 +461,7 @@ static inline int MPIDI_NM_mpi_put(const void *origin_addr,
                                                                                         target_rank)
                                               + target_true_lb, MPIDI_OFI_winfo_mr_key(win,
                                                                                        target_rank)),
-                              rdma_inject_write);
+                              rdma_inject_write, 0 /* vni_idx */);
     } else {
         mpi_errno = MPIDI_OFI_do_put(origin_addr,
                                      origin_count,
@@ -552,7 +552,7 @@ static inline int MPIDI_OFI_do_get(void *origin_addr,
         msg.rma_iov = targetv;
         msg.rma_iov_count = tout;
         MPIDI_OFI_CALL_RETRY2(MPIDI_OFI_INIT_CHUNK_CONTEXT(win, vni_idx, sigreq),
-                              fi_readmsg(ep, &msg, flags), rdma_write);
+                              fi_readmsg(ep, &msg, flags), rdma_write, 0 /* vni_idx */);
     }
 
   fn_exit:
@@ -636,7 +636,8 @@ static inline int MPIDI_NM_mpi_get(void *origin_addr,
         riov.len = target_bytes;
         riov.key = MPIDI_OFI_winfo_mr_key(win, target_rank);
         MPIDI_OFI_CALL_RETRY2(MPIDI_OFI_win_cntr_incr(win, 0 /* vni_idx */),
-                              fi_readmsg(MPIDI_OFI_WIN(win).eps[0], &msg, 0), rdma_write);
+                              fi_readmsg(MPIDI_OFI_WIN(win).eps[0], &msg, 0), rdma_write,
+                              0 /* vni_idx */);
     } else {
         mpi_errno = MPIDI_OFI_do_get(origin_addr,
                                      origin_count,
@@ -804,7 +805,8 @@ static inline int MPIDI_NM_mpi_compare_and_swap(const void *origin_addr,
     MPIDI_OFI_ASSERT_IOVEC_ALIGN(&resultv);
     MPIDI_OFI_CALL_RETRY2(MPIDI_OFI_win_cntr_incr(win, 0 /* vni_idx */),
                           fi_compare_atomicmsg(MPIDI_OFI_WIN(win).eps[0], &msg,
-                                               &comparev, NULL, 1, &resultv, NULL, 1, 0), atomicto);
+                                               &comparev, NULL, 1, &resultv, NULL, 1, 0), atomicto,
+                          0 /* vni_idx */);
   fn_exit:
     MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_NM_MPI_COMPARE_AND_SWAP);
     return mpi_errno;
@@ -1000,7 +1002,7 @@ static inline int MPIDI_OFI_do_accumulate(const void *origin_addr,
         msg.rma_iov = targetv;
         msg.rma_iov_count = tout;
         MPIDI_OFI_CALL_RETRY2(MPIDI_OFI_INIT_CHUNK_CONTEXT(win, 0 /* vni_idx */ , sigreq),
-                              fi_atomicmsg(ep, &msg, flags), rdma_atomicto);
+                              fi_atomicmsg(ep, &msg, flags), rdma_atomicto, 0 /* vni_idx */);
     }
 
   fn_exit:
@@ -1188,7 +1190,8 @@ static inline int MPIDI_OFI_do_get_accumulate(const void *origin_addr,
         MPIDI_OFI_ASSERT_IOVEC_ALIGN(resultv);
         MPIDI_OFI_CALL_RETRY2(MPIDI_OFI_INIT_CHUNK_CONTEXT(win, 0, sigreq),
                               fi_fetch_atomicmsg(ep, &msg, resultv,
-                                                 NULL, rout, flags), rdma_readfrom);
+                                                 NULL, rout, flags), rdma_readfrom,
+                              0 /* vni_idx */);
     }
 
   fn_exit:

@@ -384,7 +384,7 @@ static inline int MPIDI_OFI_conn_manager_destroy()
                                                   conn[j],
                                                   match_bits,
                                                   mask_bits, &req[j].context),
-                                         trecv, MPIDI_OFI_CALL_LOCK, FALSE);
+                                         trecv, 0 /* vni_idx */ , MPIDI_OFI_CALL_LOCK, FALSE);
                     j++;
                     break;
                 default:
@@ -1078,7 +1078,7 @@ static inline int MPIDI_NM_mpi_init_hook(int rank,
             MPIDI_OFI_CALL_RETRY(fi_recvmsg(MPIDI_Global.ctx[0].rx,
                                             &MPIDI_Global.am_msg[i],
                                             FI_MULTI_RECV | FI_COMPLETION), prepost,
-                                 MPIDI_OFI_CALL_LOCK, FALSE);
+                                 0 /* vni_idx */ , MPIDI_OFI_CALL_LOCK, FALSE);
         }
 
         /* Grow the header handlers down */
