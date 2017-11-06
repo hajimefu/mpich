@@ -222,7 +222,7 @@ static inline int MPIDI_NM_am_send_hdr(int rank,
     match_bits = MPIDI_PTL_init_tag(comm->context_id, MPIDI_PTL_AM_TAG);
 
     /* create an internal request for the inject */
-    inject_req = MPIR_Request_create(MPIR_REQUEST_KIND__UNDEFINED);
+    inject_req = MPIR_Request_create(MPIR_REQUEST_KIND__UNDEFINED, 0);
     MPIR_ERR_CHKANDSTMT((inject_req) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail,
                         "**nomemreq");
     MPIDI_NM_am_request_init(inject_req);
@@ -261,7 +261,7 @@ static inline int MPIDI_NM_am_send_hdr_reply(MPIR_Context_id_t context_id,
     match_bits = MPIDI_PTL_init_tag(use_comm->context_id, MPIDI_PTL_AM_TAG);
 
     /* create an internal request for the inject */
-    inject_req = MPIR_Request_create(MPIR_REQUEST_KIND__UNDEFINED);
+    inject_req = MPIR_Request_create(MPIR_REQUEST_KIND__UNDEFINED, 0);
     MPIR_ERR_CHKANDSTMT((inject_req) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail,
                         "**nomemreq");
     MPIDI_NM_am_request_init(inject_req);

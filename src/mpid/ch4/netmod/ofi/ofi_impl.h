@@ -182,23 +182,23 @@
                             #STR);                              \
     } while (0)
 
-#define MPIDI_OFI_REQUEST_CREATE(req, kind)                 \
+#define MPIDI_OFI_REQUEST_CREATE(req, kind, pool)             \
     do {                                                      \
-        (req) = MPIR_Request_create(kind);  \
+        (req) = MPIR_Request_create(kind, pool);                    \
         MPIR_ERR_CHKANDSTMT((req) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail, "**nomemreq"); \
         MPIR_Request_add_ref((req));                                \
     } while (0)
 
 #ifndef HAVE_DEBUGGER_SUPPORT
-#define MPIDI_OFI_SEND_REQUEST_CREATE_LW(req)                   \
+#define MPIDI_OFI_SEND_REQUEST_CREATE_LW(req, pool)                     \
     do {                                                                \
         (req) = MPIDI_Global.lw_send_req;                               \
         MPIR_Request_add_ref((req));                                    \
     } while (0)
 #else
-#define MPIDI_OFI_SEND_REQUEST_CREATE_LW(req)                   \
+#define MPIDI_OFI_SEND_REQUEST_CREATE_LW(req, pool)                     \
     do {                                                                \
-        (req) = MPIR_Request_create(MPIR_REQUEST_KIND__SEND);           \
+        (req) = MPIR_Request_create(MPIR_REQUEST_KIND__SEND, pool);     \
         MPIR_ERR_CHKANDSTMT((req) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail, "**nomemreq"); \
         MPIR_cc_set(&(req)->cc, 0);                                     \
     } while (0)
@@ -383,7 +383,7 @@ MPL_STATIC_INLINE_PREFIX MPIDI_OFI_win_request_t *MPIDI_OFI_win_request_alloc_an
 {
     int mpi_errno = MPI_SUCCESS;
     MPIDI_OFI_win_request_t *req;
-    req = (MPIDI_OFI_win_request_t *) MPIR_Request_create(MPIR_REQUEST_KIND__RMA);
+    req = (MPIDI_OFI_win_request_t *) MPIR_Request_create(MPIR_REQUEST_KIND__RMA, 0);
     MPIR_ERR_CHKANDSTMT((req) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail, "**nomemreq");
     memset((char *) req + MPIDI_REQUEST_HDR_SIZE, 0,
            sizeof(MPIDI_OFI_win_request_t) - MPIDI_REQUEST_HDR_SIZE);
@@ -404,7 +404,7 @@ MPL_STATIC_INLINE_PREFIX void MPIDI_OFI_win_request_complete(MPIDI_OFI_win_reque
     MPIR_Object_release_ref(req, &in_use);
     if (!in_use) {
         MPL_free(req->noncontig);
-        MPIR_Handle_obj_free(&MPIR_Request_mem, (req));
+        MPIR_Handle_obj_free(&MPIR_Request_mem[0 /* TODO */ ], (req));
     }
 }
 

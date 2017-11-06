@@ -377,6 +377,10 @@ int MPIR_Init_thread(int *argc, char ***argv, int required, int *provided)
         MPIR_ERR_POP(mpi_errno);
 #endif
 
+    MPIR_Object_alloc_populate(MPIR_Request_mem, MPIR_REQUEST, sizeof(MPIR_Request),
+                               MPIR_Request_direct, MPIR_REQUEST_PREALLOC, HANDLE_NUM_PBLOCKS,
+                               HANDLE_NUM_PINDICES, HANDLE_NUM_POOLS);
+
     /* FIXME: Move to os-dependent interface? */
 #ifdef HAVE_WINDOWS_H
     /* prevent the process from bringing up an error message window if mpich

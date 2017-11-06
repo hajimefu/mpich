@@ -217,7 +217,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Send(const void *buf,
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_SEND);
 
     if (unlikely(rank == MPI_PROC_NULL)) {
-        MPIR_Request *rreq = MPIR_Request_create(MPIR_REQUEST_KIND__SEND);
+        MPIR_Request *rreq = MPIR_Request_create(MPIR_REQUEST_KIND__SEND, 0);
         MPIR_ERR_CHKANDSTMT((rreq) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail, "**nomemreq");
         MPIR_Request_add_ref(rreq);
         *request = rreq;
@@ -271,7 +271,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Isend(const void *buf,
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_ISEND);
 
     if (unlikely(rank == MPI_PROC_NULL)) {
-        MPIR_Request *rreq = MPIR_Request_create(MPIR_REQUEST_KIND__SEND);
+        MPIR_Request *rreq = MPIR_Request_create(MPIR_REQUEST_KIND__SEND, 0);
         MPIR_ERR_CHKANDSTMT((rreq) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail, "**nomemreq");
         MPIR_Request_add_ref(rreq);
         *request = rreq;
@@ -332,7 +332,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Rsend(const void *buf,
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_RSEND);
 
     if (unlikely(rank == MPI_PROC_NULL)) {
-        MPIR_Request *rreq = MPIR_Request_create(MPIR_REQUEST_KIND__SEND);
+        MPIR_Request *rreq = MPIR_Request_create(MPIR_REQUEST_KIND__SEND, 0);
         MPIR_ERR_CHKANDSTMT((rreq) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail, "**nomemreq");
         MPIR_Request_add_ref(rreq);
         *request = rreq;
@@ -393,7 +393,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Irsend(const void *buf,
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_IRSEND);
 
     if (unlikely(rank == MPI_PROC_NULL)) {
-        MPIR_Request *rreq = MPIR_Request_create(MPIR_REQUEST_KIND__SEND);
+        MPIR_Request *rreq = MPIR_Request_create(MPIR_REQUEST_KIND__SEND, 0);
         MPIR_ERR_CHKANDSTMT((rreq) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail, "**nomemreq");
         MPIR_Request_add_ref(rreq);
         *request = rreq;
@@ -448,7 +448,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Ssend(const void *buf,
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_SSEND);
 
     if (unlikely(rank == MPI_PROC_NULL)) {
-        MPIR_Request *rreq = MPIR_Request_create(MPIR_REQUEST_KIND__SEND);
+        MPIR_Request *rreq = MPIR_Request_create(MPIR_REQUEST_KIND__SEND, 0);
         MPIR_ERR_CHKANDSTMT((rreq) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail, "**nomemreq");
         MPIR_Request_add_ref(rreq);
         *request = rreq;
@@ -502,7 +502,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Issend(const void *buf,
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_ISSEND);
 
     if (unlikely(rank == MPI_PROC_NULL)) {
-        MPIR_Request *rreq = MPIR_Request_create(MPIR_REQUEST_KIND__SEND);
+        MPIR_Request *rreq = MPIR_Request_create(MPIR_REQUEST_KIND__SEND, 0);
         MPIR_ERR_CHKANDSTMT((rreq) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail, "**nomemreq");
         MPIR_Request_add_ref(rreq);
         *request = rreq;

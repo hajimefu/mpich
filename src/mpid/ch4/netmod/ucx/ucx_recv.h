@@ -30,7 +30,7 @@ static inline void MPIDI_UCX_recv_cmpl_cb(void *request, ucs_status_t status,
         ucp_request->req = NULL;
         ucp_request_release(ucp_request);
     } else {
-        rreq = MPIR_Request_create(MPIR_REQUEST_KIND__RECV);
+        rreq = MPIR_Request_create(MPIR_REQUEST_KIND__RECV, 0);
         MPIR_cc_set(&rreq->cc, 0);
         ucp_request->req = rreq;
     }
@@ -142,7 +142,7 @@ static inline int MPIDI_UCX_recv(void *buf,
         ucp_request->req = NULL;
         ucp_request_release(ucp_request);
     } else {
-        req = MPIR_Request_create(MPIR_REQUEST_KIND__RECV);
+        req = MPIR_Request_create(MPIR_REQUEST_KIND__RECV, 0);
         MPIR_ERR_CHKANDSTMT((req) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail, "**nomemreq");
         MPIR_Request_add_ref(req);
         MPIDI_UCX_REQ(req).a.ucp_request = ucp_request;

@@ -1093,7 +1093,7 @@ static inline int MPIDI_NM_mpi_init_hook(int rank,
     MPIDI_OFI_index_datatypes();
 
 #ifndef HAVE_DEBUGGER_SUPPORT
-    MPIDI_Global.lw_send_req = MPIR_Request_create(MPIR_REQUEST_KIND__SEND);
+    MPIDI_Global.lw_send_req = MPIR_Request_create(MPIR_REQUEST_KIND__SEND, 0);
     if (MPIDI_Global.lw_send_req == NULL) {
         MPIR_ERR_SETFATALANDJUMP(mpi_errno, MPI_ERR_OTHER, "**nomem");
     }

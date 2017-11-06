@@ -190,9 +190,9 @@ struct MPIR_Request {
 
 #define MPIR_REQUEST_PREALLOC 8
 
-extern MPIR_Object_alloc_t MPIR_Request_mem;
+extern MPIR_Object_alloc_t MPIR_Request_mem[];
 /* Preallocated request objects */
-extern MPIR_Request MPIR_Request_direct[];
+extern MPIR_Request MPIR_Request_direct[HANDLE_NUM_POOLS][MPIR_REQUEST_PREALLOC];
 
 static inline int MPIR_Request_is_persistent(MPIR_Request * req_ptr)
 {
@@ -219,13 +219,15 @@ static inline int MPIR_Request_is_active(MPIR_Request * req_ptr)
                                          | MPIR_REQUESTS_PROPERTY__NO_GREQUESTS   \
                                          | MPIR_REQUESTS_PROPERTY__SEND_RECV_ONLY)
 
-static inline MPIR_Request *MPIR_Request_create(MPIR_Request_kind_t kind)
+static inline MPIR_Request *MPIR_Request_create(MPIR_Request_kind_t kind, int pool_idx)
 {
     MPIR_Request *req;
 
-    req = MPIR_Handle_obj_alloc(&MPIR_Request_mem);
+    req = MPIR_Handle_obj_alloc(&MPIR_Request_mem[pool_idx]);
     if (req != NULL) {
-        MPL_DBG_MSG_P(MPIR_DBG_REQUEST, VERBOSE, "allocated request, handle=0x%08x", req->handle);
+        MPL_DBG_MSG_FMT(MPIR_DBG_REQUEST, VERBOSE,
+                        (MPL_DBG_FDEST, "allocated request from pool %d, handle=0x%08x", pool_idx,
+                         req->handle));
 #ifdef MPICH_DBG_OUTPUT
         /*MPIR_Assert(HANDLE_GET_MPI_KIND(req->handle) == MPIR_REQUEST); */
         if (HANDLE_GET_MPI_KIND(req->handle) != MPIR_REQUEST) {
@@ -292,6 +294,8 @@ static inline void MPIR_Request_free(MPIR_Request * req)
     MPID_Request_free_hook(req);
 
     if (inuse == 0) {
+        int pool_idx;
+
         MPL_DBG_MSG_P(MPIR_DBG_REQUEST, VERBOSE, "freeing request, handle=0x%08x", req->handle);
 
 #ifdef MPICH_DBG_OUTPUT
@@ -327,7 +331,8 @@ static inline void MPIR_Request_free(MPIR_Request * req)
 
         MPID_Request_destroy_hook(req);
 
-        MPIR_Handle_obj_free(&MPIR_Request_mem, req);
+        pool_idx = HANDLE_POOL_INDEX(req->handle);
+        MPIR_Handle_obj_free(&MPIR_Request_mem[pool_idx], req);
     }
 }
 

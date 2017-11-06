@@ -45,7 +45,7 @@ static inline int MPIDI_OFI_do_iprobe(int source,
     MPIDI_find_tag_vni(comm, source, tag, &vni_idx);
 
     if (message) {
-        rreq = MPIR_Request_create(MPIR_REQUEST_KIND__MPROBE);
+        rreq = MPIR_Request_create(MPIR_REQUEST_KIND__MPROBE, 0);
         MPIR_ERR_CHKANDSTMT((rreq) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail, "**nomemreq");
     } else {
         rreq = &r;
