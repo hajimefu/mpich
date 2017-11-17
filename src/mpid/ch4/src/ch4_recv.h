@@ -36,7 +36,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_recv(int transport,
         MPIDI_find_tag_vni(comm, rank, tag, &vni_idx);
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
-            *(request) = MPIR_Request_create(MPIR_REQUEST_KIND__RECV);
+            *(request) = MPIR_Request_create(MPIR_REQUEST_KIND__RECV, vni_idx);
             MPIR_ERR_CHKANDSTMT((*request) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail,
                                 "**nomemreq");
             MPIDI_workq_pt2pt_enqueue(RECV, NULL /*send_buf */ , buf, count, datatype,
@@ -83,7 +83,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_irecv(int transport,
         MPIDI_find_tag_vni(comm, rank, tag, &vni_idx);
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
-            *(request) = MPIR_Request_create(MPIR_REQUEST_KIND__RECV);
+            *(request) = MPIR_Request_create(MPIR_REQUEST_KIND__RECV, vni_idx);
             MPIR_ERR_CHKANDSTMT((*request) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail,
                                 "**nomemreq");
             MPIDI_workq_pt2pt_enqueue(RECV, NULL /*send_buf */ , buf, count, datatype,

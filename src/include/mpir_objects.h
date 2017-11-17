@@ -209,7 +209,7 @@ const char *MPIR_Handle_get_kind_str(int kind);
 #define HANDLE_NUM_PBLOCKS (1 << (HANDLE_POOL_SHIFT - HANDLE_INDIRECT_SHIFT))
 
 /* Number of objects in a block when multiple pools are present */
-#define HANDLE_NUM_PINDICES 1024
+#define HANDLE_NUM_PINDICES 4096
 
 /* For direct, the remainder of the handle is the index into a predefined
    block */

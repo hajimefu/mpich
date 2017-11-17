@@ -223,7 +223,9 @@ static inline MPIR_Request *MPIR_Request_create(MPIR_Request_kind_t kind, int po
 {
     MPIR_Request *req;
 
-    req = MPIR_Handle_obj_alloc(&MPIR_Request_mem[pool_idx]);
+    MPID_THREAD_CS_ENTER(VNI, MPIR_THREAD_VNI_HANDLE_POOL_MUTEXES[pool_idx]);
+    req = MPIR_Handle_obj_alloc_unsafe(&MPIR_Request_mem[pool_idx]);
+    MPID_THREAD_CS_EXIT(VNI, MPIR_THREAD_VNI_HANDLE_POOL_MUTEXES[pool_idx]);
     if (req != NULL) {
         MPL_DBG_MSG_FMT(MPIR_DBG_REQUEST, VERBOSE,
                         (MPL_DBG_FDEST, "allocated request from pool %d, handle=0x%08x", pool_idx,
@@ -271,7 +273,7 @@ static inline MPIR_Request *MPIR_Request_create(MPIR_Request_kind_t kind, int po
         MPID_Request_create_hook(req);
     } else {
         /* FIXME: This fails to fail if debugging is turned off */
-        MPL_DBG_MSG(MPIR_DBG_REQUEST, TYPICAL, "unable to allocate a request");
+        MPL_DBG_MSG_D(MPIR_DBG_REQUEST, TYPICAL, "unable to allocate a request, pool=%d", pool_idx);
     }
 
     return req;
@@ -332,7 +334,9 @@ static inline void MPIR_Request_free(MPIR_Request * req)
         MPID_Request_destroy_hook(req);
 
         pool_idx = HANDLE_POOL_INDEX(req->handle);
-        MPIR_Handle_obj_free(&MPIR_Request_mem[pool_idx], req);
+        MPID_THREAD_CS_ENTER(VNI, MPIR_THREAD_VNI_HANDLE_POOL_MUTEXES[pool_idx]);
+        MPIR_Handle_obj_free_unsafe(&MPIR_Request_mem[pool_idx], req);
+        MPID_THREAD_CS_EXIT(VNI, MPIR_THREAD_VNI_HANDLE_POOL_MUTEXES[pool_idx]);
     }
 }
 

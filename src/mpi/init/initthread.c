@@ -183,6 +183,7 @@ MPID_Thread_mutex_t MPIR_THREAD_POBJ_PMI_MUTEX;
 
 #if MPICH_THREAD_GRANULARITY == MPICH_THREAD_GRANULARITY__VNI
 MPID_Thread_mutex_t MPIR_THREAD_POBJ_HANDLE_MUTEX;
+MPID_Thread_mutex_t MPIR_THREAD_VNI_HANDLE_POOL_MUTEXES[HANDLE_NUM_POOLS];
 #endif
 
 /* These routine handle any thread initialization that my be required */
@@ -215,10 +216,15 @@ static int thread_cs_init(void)
     MPIR_Assert(err == 0);
 
 #elif MPICH_THREAD_GRANULARITY == MPICH_THREAD_GRANULARITY__VNI
+    int i;
     MPID_Thread_mutex_create(&MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX, &err);
     MPIR_Assert(err == 0);
     MPID_Thread_mutex_create(&MPIR_THREAD_POBJ_HANDLE_MUTEX, &err);
     MPIR_Assert(err == 0);
+    for (i = 0; i < HANDLE_NUM_POOLS; i++) {
+        MPID_Thread_mutex_create(&MPIR_THREAD_VNI_HANDLE_POOL_MUTEXES[i], &err);
+        MPIR_Assert(err == 0);
+    }
 
 #elif MPICH_THREAD_GRANULARITY == MPICH_THREAD_GRANULARITY__LOCKFREE
 /* Updates to shared data and access to shared services is handled without
@@ -269,10 +275,15 @@ int MPIR_Thread_CS_Finalize(void)
     MPIR_Assert(err == 0);
 
 #elif MPICH_THREAD_GRANULARITY == MPICH_THREAD_GRANULARITY__VNI
+    int i;
     MPID_Thread_mutex_destroy(&MPIR_THREAD_GLOBAL_ALLFUNC_MUTEX, &err);
     MPIR_Assert(err == 0);
     MPID_Thread_mutex_destroy(&MPIR_THREAD_POBJ_HANDLE_MUTEX, &err);
     MPIR_Assert(err == 0);
+    for (i = 0; i < HANDLE_NUM_POOLS; i++) {
+        MPID_Thread_mutex_destroy(&MPIR_THREAD_VNI_HANDLE_POOL_MUTEXES[i], &err);
+        MPIR_Assert(err == 0);
+    }
 
 #elif MPICH_THREAD_GRANULARITY == MPICH_THREAD_GRANULARITY__LOCKFREE
 /* Updates to shared data and access to shared services is handled without

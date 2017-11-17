@@ -43,7 +43,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_iprobe(int transport,
              * enqueue function requires a request object which includes the command
              * structure.
              * This request is merely for enqueing, won't be used in netmod. */
-            req = MPIR_Request_create(MPIR_REQUEST_KIND__MPROBE);
+            req = MPIR_Request_create(MPIR_REQUEST_KIND__MPROBE, vni_idx);
             MPIR_ERR_CHKANDSTMT((req) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail,
                                 "**nomemreq");
             OPA_store_int(&processed, 0);
@@ -157,7 +157,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_improbe(int transport,
             /* Submit improbe request */
             MPIR_Request *req;
             OPA_int_t processed;
-            req = MPIR_Request_create(MPIR_REQUEST_KIND__MPROBE);
+            req = MPIR_Request_create(MPIR_REQUEST_KIND__MPROBE, vni_idx);
             MPIR_ERR_CHKANDSTMT((req) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail,
                                 "**nomemreq");
             OPA_store_int(&processed, 0);

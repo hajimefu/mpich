@@ -36,7 +36,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_send(int transport,
         MPIDI_find_tag_vni(comm, rank, tag, &vni_idx);
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
-            *(request) = MPIR_Request_create(MPIR_REQUEST_KIND__SEND);
+            *(request) = MPIR_Request_create(MPIR_REQUEST_KIND__SEND, vni_idx);
             MPIR_ERR_CHKANDSTMT((*request) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail,
                                 "**nomemreq");
             MPIDI_workq_pt2pt_enqueue(SEND, buf, NULL /*recv_buf */ , count, datatype,
@@ -82,7 +82,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_isend(int transport,
         MPIDI_find_tag_vni(comm, rank, tag, &vni_idx);
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
-            *(request) = MPIR_Request_create(MPIR_REQUEST_KIND__SEND);
+            *(request) = MPIR_Request_create(MPIR_REQUEST_KIND__SEND, vni_idx);
             MPIR_ERR_CHKANDSTMT((*request) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail,
                                 "**nomemreq");
             MPIDI_workq_pt2pt_enqueue(SEND, buf, NULL /*recv_buf */ , count, datatype,
@@ -128,7 +128,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_ssend(int transport,
         MPIDI_find_tag_vni(comm, rank, tag, &vni_idx);
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
-            *(request) = MPIR_Request_create(MPIR_REQUEST_KIND__SEND);
+            *(request) = MPIR_Request_create(MPIR_REQUEST_KIND__SEND, vni_idx);
             MPIR_ERR_CHKANDSTMT((*request) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail,
                                 "**nomemreq");
             MPIDI_workq_pt2pt_enqueue(SSEND, buf, NULL /*recv_buf */ , count, datatype,
@@ -175,7 +175,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_issend(int transport,
         MPIDI_find_tag_vni(comm, rank, tag, &vni_idx);
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
-            *(request) = MPIR_Request_create(MPIR_REQUEST_KIND__SEND);
+            *(request) = MPIR_Request_create(MPIR_REQUEST_KIND__SEND, vni_idx);
             MPIR_ERR_CHKANDSTMT((*request) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail,
                                 "**nomemreq");
             MPIDI_workq_pt2pt_enqueue(ISSEND, buf, NULL /*recv_buf */ , count, datatype,

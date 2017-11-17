@@ -144,7 +144,8 @@ static inline void *MPIR_Handle_indirect_init(void *(**indirect)[],
 
     /* See if we can allocate another block */
     if (*indirect_size >= indirect_num_blocks) {
-        /* printf("Out of space in indirect table\n"); */
+        /* printf("Out of space in indirect table, type=%s pool=%d\n",
+         * MPIR_Handle_get_kind_str(handle_type), pool_idx); */
         return 0;
     }
 

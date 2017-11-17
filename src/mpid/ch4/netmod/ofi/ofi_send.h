@@ -64,9 +64,9 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_OFI_send_lightweight_request(const void *buf,
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_OFI_SEND_LIGHTWEIGHT_REQUEST);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_OFI_SEND_LIGHTWEIGHT_REQUEST);
 
-    MPIDI_OFI_SEND_REQUEST_CREATE_LW_CONDITIONAL(*request);
     match_bits = MPIDI_OFI_init_sendtag(comm->context_id + context_offset, comm->rank, tag, 0);
     MPIDI_find_tag_vni(comm, rank, tag, &vni_idx);
+    MPIDI_OFI_SEND_REQUEST_CREATE_LW_CONDITIONAL(*request, vni_idx);
     mpi_errno =
         MPIDI_OFI_send_handler(MPIDI_Global.ctx[vni_idx].tx, buf, data_sz, NULL, comm->rank,
                                MPIDI_OFI_comm_vni_to_phys(comm, rank, vni_idx), vni_idx, match_bits,
@@ -257,14 +257,14 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_OFI_send_normal(const void *buf, MPI_Aint cou
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_OFI_SEND_NORMAL);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_OFI_SEND_NORMAL);
 
-    MPIDI_OFI_REQUEST_CREATE_CONDITIONAL(sreq, MPIR_REQUEST_KIND__SEND);
+    MPIDI_find_tag_vni(comm, rank, tag, &vni_idx);
+
+    MPIDI_OFI_REQUEST_CREATE_CONDITIONAL(sreq, MPIR_REQUEST_KIND__SEND, vni_idx);
     *request = sreq;
     match_bits = MPIDI_OFI_init_sendtag(comm->context_id + context_offset, comm->rank, tag, type);
     MPIDI_OFI_REQUEST(sreq, event_id) = MPIDI_OFI_EVENT_SEND;
     MPIDI_OFI_REQUEST(sreq, datatype) = datatype;
     MPIR_Datatype_add_ref_if_not_builtin(datatype);
-
-    MPIDI_find_tag_vni(comm, rank, tag, &vni_idx);
 
     if (type == MPIDI_OFI_SYNC_SEND) {  /* Branch should compile out */
         int c = 1;
