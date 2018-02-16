@@ -27,7 +27,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_iprobe(int transport,
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_IPROBE);
 
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_tag_vni(comm, source, tag, &vni_idx);
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
 
         /* Handoff branch: under the handoff model, this(main) thread sets the flag
@@ -144,7 +145,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_improbe(int transport,
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_IMPROBE);
 
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_tag_vni(comm, source, tag, &vni_idx);
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
 
         /* Handoff branch: under the handoff model, this(main) thread sets the flag

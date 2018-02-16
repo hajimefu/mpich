@@ -32,7 +32,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_send(int transport,
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_SEND);
 
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_tag_vni(comm, rank, tag, &vni_idx);
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
             *(request) = MPIR_Request_create(MPIR_REQUEST_KIND__SEND);
@@ -77,7 +78,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_isend(int transport,
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_ISEND);
 
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_tag_vni(comm, rank, tag, &vni_idx);
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
             *(request) = MPIR_Request_create(MPIR_REQUEST_KIND__SEND);
@@ -122,7 +124,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_ssend(int transport,
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_SSEND);
 
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_tag_vni(comm, rank, tag, &vni_idx);
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
             *(request) = MPIR_Request_create(MPIR_REQUEST_KIND__SEND);
@@ -168,7 +171,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_issend(int transport,
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_ISSEND);
 
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_tag_vni(comm, rank, tag, &vni_idx);
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
             *(request) = MPIR_Request_create(MPIR_REQUEST_KIND__SEND);

@@ -952,4 +952,19 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_CH4U_wait_am_acc(MPIR_Win * win, int target_r
   fn_fail:
     goto fn_exit;
 }
+
+static inline void MPIDI_find_tag_vni(MPIR_Comm * comm, int target_rank, int tag, int *vni_idx)
+{
+    *vni_idx = MPIR_CONTEXT_READ_FIELD(PREFIX, comm->context_id) % MPIDI_CH4_Global.n_netmod_vnis;
+    MPIR_Assert(*vni_idx >= 0);
+}
+
+static inline void MPIDI_find_rma_vni(MPIR_Win * win, int target_rank, int *vni_idx)
+{
+    *vni_idx =
+        (MPIR_CONTEXT_READ_FIELD(PREFIX, win->comm_ptr->context_id) %
+         MPIDI_CH4_Global.n_netmod_vnis) & INT_MAX;
+    MPIR_Assert(*vni_idx >= 0);
+}
+
 #endif /* CH4_IMPL_H_INCLUDED */
