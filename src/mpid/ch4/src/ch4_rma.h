@@ -31,7 +31,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_put(int transport,
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_PUT);
 
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_rma_vni(win, target_rank, &vni_idx);
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
             MPIR_Datatype_add_ref_if_not_builtin(origin_datatype);
@@ -100,7 +101,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_get(int transport,
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_GET);
 
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_rma_vni(win, target_rank, &vni_idx);
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
             MPIR_Datatype_add_ref_if_not_builtin(origin_datatype);
