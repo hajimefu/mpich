@@ -249,6 +249,7 @@ typedef struct MPIDI_CH4U_win_info_args_t {
     int accumulate_ordering;
     int alloc_shared_noncontig;
     MPIDI_CH4U_win_info_accumulate_ops accumulate_ops;
+    int num_vnis;               /* number of vnis per window */
 } MPIDI_CH4U_win_info_args_t;
 
 struct MPIDI_CH4U_win_lock {
