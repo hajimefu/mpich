@@ -570,7 +570,12 @@ static inline int MPIDI_OFI_do_inject(int rank,
 
     MPIR_Assert((uint64_t) comm->rank < (1ULL << MPIDI_OFI_AM_RANK_BITS));
 
-    addr = use_comm_table ? MPIDI_OFI_comm_to_phys(comm, rank) : MPIDI_OFI_to_phys(rank);
+    /* FIXME: currently active messages are sent only on vni_idx=0,
+     * in future need to send them through other vni_idx too;
+     * as computed by MPIDI_find_tag_vni */
+    int vni_idx = 0;
+    addr = use_comm_table ?
+        MPIDI_OFI_comm_vni_to_phys(comm, rank, vni_idx) : MPIDI_OFI_to_phys(rank);
 
     if (unlikely(am_hdr_sz + sizeof(msg_hdr) > MPIDI_Global.max_buffered_send)) {
         mpi_errno = MPIDI_OFI_do_emulated_inject(addr, &msg_hdr, am_hdr, am_hdr_sz, need_lock);
@@ -582,7 +587,7 @@ static inline int MPIDI_OFI_do_inject(int rank,
     memcpy(buff, &msg_hdr, sizeof(msg_hdr));
     memcpy(buff + sizeof(msg_hdr), am_hdr, am_hdr_sz);
 
-    MPIDI_OFI_CALL_RETRY_AM(fi_inject(MPIDI_Global.ctx[0].tx, buff, buff_len, addr),
+    MPIDI_OFI_CALL_RETRY_AM(fi_inject(MPIDI_Global.ctx[vni_idx].tx, buff, buff_len, addr),
                             need_lock, inject);
 
   fn_exit:

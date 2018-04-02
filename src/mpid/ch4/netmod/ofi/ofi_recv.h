@@ -34,7 +34,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_OFI_recv_iov(void *buf, MPI_Aint count,
                                                 int rank, uint64_t match_bits, uint64_t mask_bits,
                                                 MPIR_Comm * comm, MPIR_Context_id_t context_id,
                                                 MPIR_Request * rreq, MPIR_Datatype * dt_ptr,
-                                                uint64_t flags)
+                                                uint64_t flags, int vni_idx)
 {
     int mpi_errno = MPI_SUCCESS;
     struct iovec *originv = NULL, *originv_huge = NULL;
@@ -154,10 +154,11 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_OFI_recv_iov(void *buf, MPI_Aint count,
     msg.ignore = mask_bits;
     msg.context = (void *) &(MPIDI_OFI_REQUEST(rreq, context));
     msg.data = 0;
-    msg.addr = (MPI_ANY_SOURCE == rank) ? FI_ADDR_UNSPEC : MPIDI_OFI_comm_to_phys(comm, rank);
+    msg.addr =
+        (MPI_ANY_SOURCE == rank) ? FI_ADDR_UNSPEC : MPIDI_OFI_comm_vni_to_phys(comm, rank, vni_idx);
 
-    MPIDI_OFI_CALL_RETRY(fi_trecvmsg(MPIDI_Global.ctx[0].rx, &msg, flags), trecv,
-                         0 /* vni_idx */ , MPIDI_OFI_CALL_LOCK, FALSE);
+    MPIDI_OFI_CALL_RETRY(fi_trecvmsg(MPIDI_Global.ctx[vni_idx].rx, &msg, flags), trecv,
+                         vni_idx, MPIDI_OFI_CALL_LOCK, FALSE);
 
   fn_exit:
     MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_OFI_RECV_IOV);
@@ -195,12 +196,15 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_OFI_do_irecv(void *buf,
     MPIR_Datatype *dt_ptr;
     struct fi_msg_tagged msg;
     char *recv_buf;
+    int vni_idx;
 
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_OFI_DO_IRECV);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_OFI_DO_IRECV);
 
+    MPIDI_find_tag_vni(comm, rank, tag, &vni_idx);
+
     if (mode == MPIDI_OFI_ON_HEAP) {    /* Branch should compile out */
-        MPIDI_OFI_REQUEST_CREATE_CONDITIONAL(rreq, MPIR_REQUEST_KIND__RECV);
+        MPIDI_OFI_REQUEST_CREATE_CONDITIONAL(rreq, MPIR_REQUEST_KIND__RECV, vni_idx);
         /* Need to set the source to UNDEFINED for anysource matching */
         rreq->status.MPI_SOURCE = MPI_UNDEFINED;
     } else if (mode == MPIDI_OFI_USE_EXISTING) {
@@ -224,7 +228,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_OFI_do_irecv(void *buf,
         if (MPIDI_OFI_ENABLE_PT2PT_NOPACK && data_sz <= MPIDI_Global.max_send) {
             mpi_errno =
                 MPIDI_OFI_recv_iov(buf, count, rank, match_bits, mask_bits, comm, context_id, rreq,
-                                   dt_ptr, flags);
+                                   dt_ptr, flags, vni_idx);
             if (mpi_errno == MPI_SUCCESS)       /* Receive posted using iov */
                 goto fn_exit;
             else if (mpi_errno != MPIDI_OFI_RECV_NEEDS_UNPACK)
@@ -259,12 +263,14 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_OFI_do_irecv(void *buf,
         MPIDI_OFI_REQUEST(rreq, event_id) = MPIDI_OFI_EVENT_RECV;
 
     if (!flags) /* Branch should compile out */
-        MPIDI_OFI_CALL_RETRY(fi_trecv(MPIDI_Global.ctx[0].rx,
+        MPIDI_OFI_CALL_RETRY(fi_trecv(MPIDI_Global.ctx[vni_idx].rx,
                                       recv_buf,
                                       data_sz,
                                       NULL,
                                       (MPI_ANY_SOURCE ==
-                                       rank) ? FI_ADDR_UNSPEC : MPIDI_OFI_av_to_phys(addr),
+                                       rank) ? FI_ADDR_UNSPEC : MPIDI_OFI_comm_vni_to_phys(comm,
+                                                                                           rank,
+                                                                                           vni_idx),
                                       match_bits, mask_bits,
                                       (void *) &(MPIDI_OFI_REQUEST(rreq, context))), trecv,
                              0 /* vni_idx */ , MPIDI_OFI_CALL_LOCK, FALSE);
@@ -282,8 +288,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_OFI_do_irecv(void *buf,
         msg.data = 0;
         msg.addr = FI_ADDR_UNSPEC;
 
-        MPIDI_OFI_CALL_RETRY(fi_trecvmsg(MPIDI_Global.ctx[0].rx, &msg, flags), trecv,
-                             0 /* vni_idx */ , MPIDI_OFI_CALL_LOCK, FALSE);
+        MPIDI_OFI_CALL_RETRY(fi_trecvmsg(MPIDI_Global.ctx[vni_idx].rx, &msg, flags), trecv,
+                             vni_idx, MPIDI_OFI_CALL_LOCK, FALSE);
     }
 
   fn_exit:

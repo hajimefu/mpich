@@ -151,9 +151,12 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_OFI_recv_event(struct fi_cq_tagged_entry *wc,
                                                   MPIDI_OFI_SYNC_SEND_ACK);
         MPIR_Comm *c = MPIDI_OFI_REQUEST(rreq, util_comm);
         int r = rreq->status.MPI_SOURCE;
-        mpi_errno = MPIDI_OFI_send_handler(MPIDI_Global.ctx[0].tx, NULL, 0, NULL,
+        int vni_idx;
+        MPIDI_find_tag_vni(c, r, rreq->status.MPI_TAG, &vni_idx);
+        mpi_errno = MPIDI_OFI_send_handler(MPIDI_Global.ctx[vni_idx].tx, NULL, 0, NULL,
                                            MPIDI_OFI_REQUEST(rreq, util_comm->rank),
-                                           MPIDI_OFI_comm_to_phys(c, r), 0 /* vni_idx */ ,
+                                           MPIDI_OFI_comm_vni_to_phys(c, r, vni_idx),
+                                           vni_idx,
                                            ss_bits, NULL, MPIDI_OFI_DO_INJECT,
                                            MPIDI_OFI_CALL_NO_LOCK, FALSE);
         if (mpi_errno)
@@ -423,16 +426,19 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_OFI_get_huge_event(struct fi_cq_tagged_entry 
 
         remote_key = recv->remote_info.rma_key;
 
+        int vni_idx;
+        MPIDI_find_tag_vni(recv->comm_ptr, recv->remote_info.origin_rank, recv->remote_info.tag,
+                           &vni_idx);
         MPIDI_OFI_cntr_incr();
-        MPIDI_OFI_CALL_RETRY(fi_read(MPIDI_Global.ctx[0].tx,    /* endpoint     */
+        MPIDI_OFI_CALL_RETRY(fi_read(MPIDI_Global.ctx[vni_idx].tx,      /* endpoint     */
                                      (void *) ((uintptr_t) recv->wc.buf + recv->cur_offset),    /* local buffer */
                                      bytesToGet,        /* bytes        */
                                      NULL,      /* descriptor   */
-                                     MPIDI_OFI_comm_to_phys(recv->comm_ptr, recv->remote_info.origin_rank),     /* Destination  */
+                                     MPIDI_OFI_comm_vni_to_phys(recv->comm_ptr, recv->remote_info.origin_rank, vni_idx),        /* Destination  */
                                      MPIDI_OFI_recv_rbase(recv) + recv->cur_offset,     /* remote maddr */
                                      remote_key,        /* Key          */
                                      (void *) &recv->context), rdma_readfrom,   /* Context */
-                             0 /* vni_idx */ , MPIDI_OFI_CALL_NO_LOCK, FALSE);
+                             vni_idx, MPIDI_OFI_CALL_NO_LOCK, FALSE);
         recv->cur_offset += bytesToGet;
     }
 

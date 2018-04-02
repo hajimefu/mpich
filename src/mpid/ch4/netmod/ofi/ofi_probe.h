@@ -32,7 +32,7 @@ static inline int MPIDI_OFI_do_iprobe(int source,
     MPIR_Request r, *rreq;      /* don't need to init request, output only */
     struct fi_msg_tagged msg;
     int ofi_err;
-    int vni_idx = 0;
+    int vni_idx;
 
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_OFI_DO_IPROBE);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_OFI_DO_IPROBE);
@@ -41,6 +41,8 @@ static inline int MPIDI_OFI_do_iprobe(int source,
         remote_proc = FI_ADDR_UNSPEC;
     else
         remote_proc = MPIDI_OFI_av_to_phys(addr);
+
+    MPIDI_find_tag_vni(comm, source, tag, &vni_idx);
 
     if (message) {
         rreq = MPIR_Request_create(MPIR_REQUEST_KIND__MPROBE);
@@ -63,7 +65,7 @@ static inline int MPIDI_OFI_do_iprobe(int source,
     msg.context = (void *) &(MPIDI_OFI_REQUEST(rreq, context));
     msg.data = 0;
 
-    MPIDI_OFI_CALL_RETURN(fi_trecvmsg(MPIDI_Global.ctx[0].rx, &msg,
+    MPIDI_OFI_CALL_RETURN(fi_trecvmsg(MPIDI_Global.ctx[vni_idx].rx, &msg,
                                       peek_flags | FI_PEEK | FI_COMPLETION | (MPIDI_OFI_ENABLE_DATA
                                                                               ? FI_REMOTE_CQ_DATA :
                                                                               0)), ofi_err);
