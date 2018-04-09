@@ -100,7 +100,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_complete(int transport, MPIR_Win * win)
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_COMPLETE);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_COMPLETE);
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_rma_vni(win, 0, &vni_idx);   /* target rank doesn't have any impact in current implementation */
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
             OPA_int_t processed;
@@ -154,7 +155,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_post(int transport, MPIR_Group * group,
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_POST);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_POST);
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_rma_vni(win, 0, &vni_idx);   /* target rank doesn't have any impact in current implementation */
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
             OPA_int_t processed;
@@ -248,7 +250,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_lock(int transport, int lock_type, int ra
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_LOCK);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_LOCK);
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_rma_vni(win, 0, &vni_idx);   /* target rank doesn't have any impact in current implementation */
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
             OPA_int_t processed;
@@ -302,7 +305,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_unlock(int transport, int rank, MPIR_Win 
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_UNLOCK);
 
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_rma_vni(win, rank, &vni_idx);
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
             OPA_int_t processed;
@@ -401,7 +405,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_fence(int transport, int assert, MPIR_Win
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_FENCE);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_FENCE);
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_rma_vni(win, 0, &vni_idx);   /* target rank doesn't have any impact in current implementation */
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
             /* Flush RMA operations. */
@@ -531,7 +536,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_flush_local(int transport, int rank, MPIR
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_FLUSH_LOCAL);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_FLUSH_LOCAL);
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_rma_vni(win, rank, &vni_idx);
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
             OPA_int_t processed;
@@ -655,7 +661,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_flush(int transport, int rank, MPIR_Win *
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_FLUSH);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_FLUSH);
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_rma_vni(win, rank, &vni_idx);
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
             OPA_int_t processed;
@@ -708,7 +715,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_flush_local_all(int transport, MPIR_Win *
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_FLUSH_LOCAL_ALL);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_FLUSH_LOCAL_ALL);
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_rma_vni(win, 0, &vni_idx);   /* target rank doesn't have any impact in current implementation */
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
             OPA_int_t processed;
@@ -761,7 +769,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_unlock_all(int transport, MPIR_Win * win)
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_UNLOCK_ALL);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_UNLOCK_ALL);
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_rma_vni(win, 0, &vni_idx);   /* target rank doesn't have any impact in current implementation */
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
             OPA_int_t processed;
@@ -858,7 +867,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_flush_all(int transport, MPIR_Win * win)
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_FLUSH_ALL);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_FLUSH_ALL);
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_rma_vni(win, 0, &vni_idx);   /* target rank doesn't have any impact in current implementation */
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
             OPA_int_t processed;
@@ -911,7 +921,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_lock_all(int transport, int assert, MPIR_
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_LOCK_ALL);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_LOCK_ALL);
     if (transport == MPIDI_CH4R_NETMOD) {
-        int vni_idx = 0, cs_acq = 0;
+        int vni_idx, cs_acq = 0;
+        MPIDI_find_rma_vni(win, 0, &vni_idx);   /* target rank doesn't have any impact in current implementation */
         MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
         if (!cs_acq) {
             OPA_int_t processed;
