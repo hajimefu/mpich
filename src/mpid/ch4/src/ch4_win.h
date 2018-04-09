@@ -91,6 +91,38 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_start(MPIR_Group * group, int assert, MPIR
 }
 
 #undef FUNCNAME
+#define FUNCNAME MPIDI_win_complete
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+MPL_STATIC_INLINE_PREFIX int MPIDI_win_complete(int transport, MPIR_Win * win)
+{
+    int mpi_errno = MPI_SUCCESS;
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_COMPLETE);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_COMPLETE);
+    if (transport == MPIDI_CH4R_NETMOD) {
+        int vni_idx = 0, cs_acq = 0;
+        MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
+        if (!cs_acq) {
+            OPA_int_t processed;
+            OPA_store_int(&processed, 0);
+            MPIDI_CH4U_win_drain_queue(win);
+            MPIDI_workq_rma_enqueue(COMPLETE, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, 0, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, 0, 0, win, NULL, vni_idx, &processed);     /* only win, vni_idx and processed
+                                                                                                                                                                                                 * are required for complete */
+            /* Busy loop to block until all RMA ops are completed. */
+            while (!OPA_load_int(&processed));
+
+            mpi_errno = MPI_SUCCESS;
+        } else {
+            mpi_errno = MPIDI_NM_mpi_win_complete(win);
+            MPID_THREAD_SAFE_END(VNI, MPIDI_CH4_Global.vni_locks[vni_idx]);
+        }
+    }
+
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_WIN_COMPLETE);
+    return mpi_errno;
+}
+
+#undef FUNCNAME
 #define FUNCNAME MPID_Win_complete
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
@@ -99,7 +131,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_complete(MPIR_Win * win)
     int mpi_errno;
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_WIN_COMPLETE);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_WIN_COMPLETE);
-    mpi_errno = MPIDI_NM_mpi_win_complete(win);
+    mpi_errno = MPIDI_win_complete(MPIDI_CH4R_NETMOD, win);
     if (mpi_errno != MPI_SUCCESS) {
         MPIR_ERR_POP(mpi_errno);
     }
@@ -111,6 +143,38 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_complete(MPIR_Win * win)
 }
 
 #undef FUNCNAME
+#define FUNCNAME MPIDI_win_post
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+MPL_STATIC_INLINE_PREFIX int MPIDI_win_post(int transport, MPIR_Group * group,
+                                            int assert, MPIR_Win * win)
+{
+    int mpi_errno = MPI_SUCCESS;
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_POST);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_POST);
+    if (transport == MPIDI_CH4R_NETMOD) {
+        int vni_idx = 0, cs_acq = 0;
+        MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
+        if (!cs_acq) {
+            OPA_int_t processed;
+            OPA_store_int(&processed, 0);
+            MPIDI_workq_rma_enqueue(POST, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, 0, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, group, 0, assert, win, NULL, vni_idx, &processed);   /* only group, assert, win, vni_idx and processed
+                                                                                                                                                                                                 * are required for post */
+            /* Busy loop to block until all RMA ops are completed. */
+            while (!OPA_load_int(&processed));
+
+            mpi_errno = MPI_SUCCESS;
+        } else {
+            mpi_errno = MPIDI_NM_mpi_win_post(group, assert, win);
+            MPID_THREAD_SAFE_END(VNI, MPIDI_CH4_Global.vni_locks[vni_idx]);
+        }
+    }
+
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_WIN_POST);
+    return mpi_errno;
+}
+
+#undef FUNCNAME
 #define FUNCNAME MPID_Win_post
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
@@ -119,7 +183,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_post(MPIR_Group * group, int assert, MPIR_
     int mpi_errno;
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_WIN_POST);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_WIN_POST);
-    mpi_errno = MPIDI_NM_mpi_win_post(group, assert, win);
+    mpi_errno = MPIDI_win_post(MPIDI_CH4R_NETMOD, group, assert, win);
     if (mpi_errno != MPI_SUCCESS) {
         MPIR_ERR_POP(mpi_errno);
     }
@@ -172,6 +236,38 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_test(MPIR_Win * win, int *flag)
 }
 
 #undef FUNCNAME
+#define FUNCNAME MPIDI_win_lock
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+MPL_STATIC_INLINE_PREFIX int MPIDI_win_lock(int transport, int lock_type, int rank, int assert,
+                                            MPIR_Win * win, MPIDI_av_entry_t * addr)
+{
+    int mpi_errno = MPI_SUCCESS;
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_LOCK);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_LOCK);
+    if (transport == MPIDI_CH4R_NETMOD) {
+        int vni_idx = 0, cs_acq = 0;
+        MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
+        if (!cs_acq) {
+            OPA_int_t processed;
+            OPA_store_int(&processed, 0);
+            MPIDI_workq_rma_enqueue(LOCK, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, rank, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, lock_type, assert, win, addr, vni_idx, &processed); /* only lock_type, target_rank, assert, win, vni_idx, rma_addr and processed
+                                                                                                                                                                                                         * are required for post */
+            /* Busy loop to block until all RMA ops are completed. */
+            while (!OPA_load_int(&processed));
+
+            mpi_errno = MPI_SUCCESS;
+        } else {
+            mpi_errno = MPIDI_NM_mpi_win_lock(lock_type, rank, assert, win, addr);
+            MPID_THREAD_SAFE_END(VNI, MPIDI_CH4_Global.vni_locks[vni_idx]);
+        }
+    }
+
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_WIN_LOCK);
+    return mpi_errno;
+}
+
+#undef FUNCNAME
 #define FUNCNAME MPID_Win_lock
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
@@ -180,7 +276,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_lock(int lock_type, int rank, int assert, 
     int mpi_errno;
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_WIN_LOCK);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_WIN_LOCK);
-    mpi_errno = MPIDI_NM_mpi_win_lock(lock_type, rank, assert, win, NULL);
+    mpi_errno = MPIDI_win_lock(MPIDI_CH4R_NETMOD, lock_type, rank, assert, win, NULL);
     if (mpi_errno != MPI_SUCCESS) {
         MPIR_ERR_POP(mpi_errno);
     }
@@ -192,6 +288,40 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_lock(int lock_type, int rank, int assert, 
 }
 
 #undef FUNCNAME
+#define FUNCNAME MPIDI_win_unlock
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+MPL_STATIC_INLINE_PREFIX int MPIDI_win_unlock(int transport, int rank, MPIR_Win * win,
+                                              MPIDI_av_entry_t * addr)
+{
+    int mpi_errno = MPI_SUCCESS;
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_UNLOCK);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_UNLOCK);
+
+    if (transport == MPIDI_CH4R_NETMOD) {
+        int vni_idx = 0, cs_acq = 0;
+        MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
+        if (!cs_acq) {
+            OPA_int_t processed;
+            OPA_store_int(&processed, 0);
+            MPIDI_CH4U_win_drain_queue(win);
+            MPIDI_workq_rma_enqueue(UNLOCK, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, rank, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, 0, 0, win, addr, vni_idx, &processed);    /* only rank, win, addr, vni_idx and
+                                                                                                                                                                                                 * processed are required for unlock */
+            mpi_errno = MPI_SUCCESS;
+            /* Busy loop to block until all RMA ops are completed. */
+            while (!OPA_load_int(&processed));
+
+            mpi_errno = MPI_SUCCESS;
+        } else {
+            mpi_errno = MPIDI_NM_mpi_win_unlock(rank, win, addr);
+            MPID_THREAD_SAFE_END(VNI, MPIDI_CH4_Global.vni_locks[vni_idx]);
+        }
+    }
+    MPIR_FUNC_VERBOSE_EXIT(MPIDI_STATE_MPID_WIN_UNLOCK);
+    return mpi_errno;
+}
+
+#undef FUNCNAME
 #define FUNCNAME MPID_Win_unlock
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
@@ -200,7 +330,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_unlock(int rank, MPIR_Win * win)
     int mpi_errno;
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_WIN_UNLOCK);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_WIN_UNLOCK);
-    mpi_errno = MPIDI_NM_mpi_win_unlock(rank, win, NULL);
+    mpi_errno = MPIDI_win_unlock(MPIDI_CH4R_NETMOD, rank, win, NULL);
     if (mpi_errno != MPI_SUCCESS) {
         MPIR_ERR_POP(mpi_errno);
     }
@@ -256,6 +386,43 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_free(MPIR_Win ** win_ptr)
 }
 
 #undef FUNCNAME
+#define FUNCNAME MPIDI_win_fence
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+/* Alternative Win_fence interface for multiple threading. */
+MPL_STATIC_INLINE_PREFIX int MPIDI_win_fence(int transport, int assert, MPIR_Win * win)
+{
+    int mpi_errno = MPI_SUCCESS;
+    MPIR_Errflag_t errflag = MPIR_ERR_NONE;
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_FENCE);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_FENCE);
+    if (transport == MPIDI_CH4R_NETMOD) {
+        int vni_idx = 0, cs_acq = 0;
+        MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
+        if (!cs_acq) {
+            /* Flush RMA operations. */
+            OPA_int_t processed;
+            OPA_store_int(&processed, 0);
+            MPIDI_CH4U_win_drain_queue(win);
+            MPIDI_workq_rma_enqueue(FENCE_FLUSH, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, 0, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, 0, assert, win, NULL, vni_idx, &processed);     /* only assert, win, vni_idx and
+                                                                                                                                                                                                         * processed are required for fence */
+            /* Busy loop to block until all RMA ops are completed. */
+            while (!OPA_load_int(&processed));
+
+            mpi_errno = MPI_SUCCESS;
+        } else {
+            mpi_errno = MPIDI_NM_win_fence_flush(assert, win);
+            MPID_THREAD_SAFE_END(VNI, MPIDI_CH4_Global.vni_locks[vni_idx]);
+        }
+    }
+    /* MPI Barrier */
+    MPIR_Barrier(win->comm_ptr, &errflag);
+
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_WIN_FENCE);
+    return mpi_errno;
+}
+
+#undef FUNCNAME
 #define FUNCNAME MPID_Win_fence
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
@@ -264,7 +431,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_fence(int assert, MPIR_Win * win)
     int mpi_errno;
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_WIN_FENCE);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_WIN_FENCE);
-    mpi_errno = MPIDI_NM_mpi_win_fence(assert, win);
+    mpi_errno = MPIDI_win_fence(MPIDI_CH4R_NETMOD, assert, win);
     if (mpi_errno != MPI_SUCCESS) {
         MPIR_ERR_POP(mpi_errno);
     }
@@ -349,6 +516,39 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_allocate_shared(MPI_Aint size,
 }
 
 #undef FUNCNAME
+#define FUNCNAME MPIDI_win_flush_local
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+MPL_STATIC_INLINE_PREFIX int MPIDI_win_flush_local(int transport, int rank, MPIR_Win * win,
+                                                   MPIDI_av_entry_t * addr)
+{
+    int mpi_errno = MPI_SUCCESS;
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_FLUSH_LOCAL);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_FLUSH_LOCAL);
+    if (transport == MPIDI_CH4R_NETMOD) {
+        int vni_idx = 0, cs_acq = 0;
+        MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
+        if (!cs_acq) {
+            OPA_int_t processed;
+            OPA_store_int(&processed, 0);
+            MPIDI_CH4U_win_drain_queue(win);
+            MPIDI_workq_rma_enqueue(FLUSH_LOCAL, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, rank, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, 0, 0, win, addr, vni_idx, &processed);       /* only rank, win, addr and processed
+                                                                                                                                                                                                         * are required for flush_local */
+            /* Busy loop to block until all RMA ops are completed. */
+            while (!OPA_load_int(&processed));
+
+            mpi_errno = MPI_SUCCESS;
+        } else {
+            mpi_errno = MPIDI_NM_mpi_win_flush_local(rank, win, addr);
+            MPID_THREAD_SAFE_END(VNI, MPIDI_CH4_Global.vni_locks[vni_idx]);
+        }
+    }
+
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_WIN_FLUSH_LOCAL);
+    return mpi_errno;
+}
+
+#undef FUNCNAME
 #define FUNCNAME MPID_Win_flush_local
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
@@ -357,7 +557,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_flush_local(int rank, MPIR_Win * win)
     int mpi_errno;
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_WIN_FLUSH_LOCAL);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_WIN_FLUSH_LOCAL);
-    mpi_errno = MPIDI_NM_mpi_win_flush_local(rank, win, NULL);
+    mpi_errno = MPIDI_win_flush_local(MPIDI_CH4R_NETMOD, rank, win, NULL);
     if (mpi_errno != MPI_SUCCESS) {
         MPIR_ERR_POP(mpi_errno);
     }
@@ -439,6 +639,39 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_allocate(MPI_Aint size,
 }
 
 #undef FUNCNAME
+#define FUNCNAME MPIDI_win_flush
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+MPL_STATIC_INLINE_PREFIX int MPIDI_win_flush(int transport, int rank, MPIR_Win * win,
+                                             MPIDI_av_entry_t * addr)
+{
+    int mpi_errno = MPI_SUCCESS;
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_FLUSH);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_FLUSH);
+    if (transport == MPIDI_CH4R_NETMOD) {
+        int vni_idx = 0, cs_acq = 0;
+        MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
+        if (!cs_acq) {
+            OPA_int_t processed;
+            OPA_store_int(&processed, 0);
+            MPIDI_CH4U_win_drain_queue(win);
+            MPIDI_workq_rma_enqueue(FLUSH, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, rank, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, 0, 0, win, addr, vni_idx, &processed);     /* only rank, win, vni_idx, addr and processed
+                                                                                                                                                                                                 * are required for flush */
+            /* Busy loop to block until all RMA ops are completed. */
+            while (!OPA_load_int(&processed));
+
+            mpi_errno = MPI_SUCCESS;
+        } else {
+            mpi_errno = MPIDI_NM_mpi_win_flush(rank, win, addr);
+            MPID_THREAD_SAFE_END(VNI, MPIDI_CH4_Global.vni_locks[vni_idx]);
+        }
+    }
+
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_WIN_FLUSH);
+    return mpi_errno;
+}
+
+#undef FUNCNAME
 #define FUNCNAME MPID_Win_flush
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
@@ -447,7 +680,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_flush(int rank, MPIR_Win * win)
     int mpi_errno;
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_WIN_FLUSH);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_WIN_FLUSH);
-    mpi_errno = MPIDI_NM_mpi_win_flush(rank, win, NULL);
+    mpi_errno = MPIDI_win_flush(MPIDI_CH4R_NETMOD, rank, win, NULL);
     if (mpi_errno != MPI_SUCCESS) {
         MPIR_ERR_POP(mpi_errno);
     }
@@ -459,6 +692,38 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_flush(int rank, MPIR_Win * win)
 }
 
 #undef FUNCNAME
+#define FUNCNAME MPIDI_win_flush_local_all
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+MPL_STATIC_INLINE_PREFIX int MPIDI_win_flush_local_all(int transport, MPIR_Win * win)
+{
+    int mpi_errno = MPI_SUCCESS;
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_FLUSH_LOCAL_ALL);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_FLUSH_LOCAL_ALL);
+    if (transport == MPIDI_CH4R_NETMOD) {
+        int vni_idx = 0, cs_acq = 0;
+        MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
+        if (!cs_acq) {
+            OPA_int_t processed;
+            OPA_store_int(&processed, 0);
+            MPIDI_CH4U_win_drain_queue(win);
+            MPIDI_workq_rma_enqueue(FLUSH_LOCAL_ALL, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, 0, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, 0, 0, win, NULL, vni_idx, &processed);      /* only win, vni_idx and processed
+                                                                                                                                                                                                         * are required for flush_local_all */
+            /* Busy loop to block until all RMA ops are completed. */
+            while (!OPA_load_int(&processed));
+
+            mpi_errno = MPI_SUCCESS;
+        } else {
+            mpi_errno = MPIDI_NM_mpi_win_flush_local_all(win);
+            MPID_THREAD_SAFE_END(VNI, MPIDI_CH4_Global.vni_locks[vni_idx]);
+        }
+    }
+
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_WIN_FLUSH_LOCAL_ALL);
+    return mpi_errno;
+}
+
+#undef FUNCNAME
 #define FUNCNAME MPID_Win_flush_local_all
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
@@ -467,7 +732,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_flush_local_all(MPIR_Win * win)
     int mpi_errno;
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_WIN_FLUSH_LOCAL_ALL);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_WIN_FLUSH_LOCAL_ALL);
-    mpi_errno = MPIDI_NM_mpi_win_flush_local_all(win);
+    mpi_errno = MPIDI_win_flush_local_all(MPIDI_CH4R_NETMOD, win);
     if (mpi_errno != MPI_SUCCESS) {
         MPIR_ERR_POP(mpi_errno);
     }
@@ -479,6 +744,38 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_flush_local_all(MPIR_Win * win)
 }
 
 #undef FUNCNAME
+#define FUNCNAME MPIDI_win_unlock_all
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+MPL_STATIC_INLINE_PREFIX int MPIDI_win_unlock_all(int transport, MPIR_Win * win)
+{
+    int mpi_errno = MPI_SUCCESS;
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_UNLOCK_ALL);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_UNLOCK_ALL);
+    if (transport == MPIDI_CH4R_NETMOD) {
+        int vni_idx = 0, cs_acq = 0;
+        MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
+        if (!cs_acq) {
+            OPA_int_t processed;
+            OPA_store_int(&processed, 0);
+            MPIDI_CH4U_win_drain_queue(win);
+            MPIDI_workq_rma_enqueue(UNLOCK_ALL, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, 0, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, 0, 0, win, NULL, vni_idx, &processed);   /* only win, vni_idx and processed
+                                                                                                                                                                                                 * are required for unlock_all */
+            /* Busy loop to block until all RMA ops are completed. */
+            while (!OPA_load_int(&processed));
+
+            mpi_errno = MPI_SUCCESS;
+        } else {
+            mpi_errno = MPIDI_NM_mpi_win_unlock_all(win);
+            MPID_THREAD_SAFE_END(VNI, MPIDI_CH4_Global.vni_locks[vni_idx]);
+        }
+    }
+
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_WIN_UNLOCK_ALL);
+    return mpi_errno;
+}
+
+#undef FUNCNAME
 #define FUNCNAME MPID_Win_unlock_all
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
@@ -487,7 +784,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_unlock_all(MPIR_Win * win)
     int mpi_errno;
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_WIN_UNLOCK_ALL);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_WIN_UNLOCK_ALL);
-    mpi_errno = MPIDI_NM_mpi_win_unlock_all(win);
+    mpi_errno = MPIDI_win_unlock_all(MPIDI_CH4R_NETMOD, win);
     if (mpi_errno != MPI_SUCCESS) {
         MPIR_ERR_POP(mpi_errno);
     }
@@ -543,6 +840,38 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_sync(MPIR_Win * win)
 }
 
 #undef FUNCNAME
+#define FUNCNAME MPIDI_win_flush_all
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+MPL_STATIC_INLINE_PREFIX int MPIDI_win_flush_all(int transport, MPIR_Win * win)
+{
+    int mpi_errno = MPI_SUCCESS;
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_FLUSH_ALL);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_FLUSH_ALL);
+    if (transport == MPIDI_CH4R_NETMOD) {
+        int vni_idx = 0, cs_acq = 0;
+        MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
+        if (!cs_acq) {
+            OPA_int_t processed;
+            OPA_store_int(&processed, 0);
+            MPIDI_CH4U_win_drain_queue(win);
+            MPIDI_workq_rma_enqueue(FLUSH_ALL, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, 0, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, 0, 0, win, NULL, vni_idx, &processed);    /* only win, vni_idx and processed
+                                                                                                                                                                                                 * are required for unlock_all */
+            /* Busy loop to block until all RMA ops are completed. */
+            while (!OPA_load_int(&processed));
+
+            mpi_errno = MPI_SUCCESS;
+        } else {
+            mpi_errno = MPIDI_NM_mpi_win_flush_all(win);
+            MPID_THREAD_SAFE_END(VNI, MPIDI_CH4_Global.vni_locks[vni_idx]);
+        }
+    }
+
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_WIN_FLUSH_ALL);
+    return mpi_errno;
+}
+
+#undef FUNCNAME
 #define FUNCNAME MPID_Win_flush_all
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
@@ -551,7 +880,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_flush_all(MPIR_Win * win)
     int mpi_errno;
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_WIN_FLUSH_ALL);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_WIN_FLUSH_ALL);
-    mpi_errno = MPIDI_NM_mpi_win_flush_all(win);
+    mpi_errno = MPIDI_win_flush_all(MPIDI_CH4R_NETMOD, win);
     if (mpi_errno != MPI_SUCCESS) {
         MPIR_ERR_POP(mpi_errno);
     }
@@ -563,6 +892,37 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_flush_all(MPIR_Win * win)
 }
 
 #undef FUNCNAME
+#define FUNCNAME MPIDI_win_lock_all
+#undef FCNAME
+#define FCNAME MPL_QUOTE(FUNCNAME)
+MPL_STATIC_INLINE_PREFIX int MPIDI_win_lock_all(int transport, int assert, MPIR_Win * win)
+{
+    int mpi_errno = MPI_SUCCESS;
+    MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPIDI_WIN_LOCK_ALL);
+    MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPIDI_WIN_LOCK_ALL);
+    if (transport == MPIDI_CH4R_NETMOD) {
+        int vni_idx = 0, cs_acq = 0;
+        MPID_THREAD_SAFE_BEGIN(VNI, MPIDI_CH4_Global.vni_locks[vni_idx], cs_acq);
+        if (!cs_acq) {
+            OPA_int_t processed;
+            OPA_store_int(&processed, 0);
+            MPIDI_workq_rma_enqueue(LOCK_ALL, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, 0, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, 0, assert, win, NULL, vni_idx, &processed);        /* only assert, win, vni_idx and processed
+                                                                                                                                                                                                         * are required for unlock_all */
+            /* Busy loop to block until all RMA ops are completed. */
+            while (!OPA_load_int(&processed));
+
+            mpi_errno = MPI_SUCCESS;
+        } else {
+            mpi_errno = MPIDI_NM_mpi_win_lock_all(assert, win);
+            MPID_THREAD_SAFE_END(VNI, MPIDI_CH4_Global.vni_locks[vni_idx]);
+        }
+    }
+
+    MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_WIN_LOCK_ALL);
+    return mpi_errno;
+}
+
+#undef FUNCNAME
 #define FUNCNAME MPID_Win_lock_all
 #undef FCNAME
 #define FCNAME MPL_QUOTE(FUNCNAME)
@@ -571,7 +931,7 @@ MPL_STATIC_INLINE_PREFIX int MPID_Win_lock_all(int assert, MPIR_Win * win)
     int mpi_errno;
     MPIR_FUNC_VERBOSE_STATE_DECL(MPID_STATE_MPID_WIN_LOCK_ALL);
     MPIR_FUNC_VERBOSE_ENTER(MPID_STATE_MPID_WIN_LOCK_ALL);
-    mpi_errno = MPIDI_NM_mpi_win_lock_all(assert, win);
+    mpi_errno = MPIDI_win_lock_all(MPIDI_CH4R_NETMOD, assert, win);
     if (mpi_errno != MPI_SUCCESS) {
         MPIR_ERR_POP(mpi_errno);
     }

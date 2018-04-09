@@ -262,6 +262,83 @@ static inline int MPIDI_workq_dispatch(MPIDI_workq_elemt_t * workq_elemt)
             MPIR_Datatype_release_if_not_builtin(workq_elemt->target_datatype);
             MPIDI_workq_elemt_free(workq_elemt);
             break;
+        case POST:
+            MPIDI_NM_mpi_win_post(workq_elemt->group, workq_elemt->assert, workq_elemt->win_ptr);
+            OPA_store_int(workq_elemt->processed, 1);   /* set to true to let the main thread
+                                                         * learn that the item is processed */
+            MPIDI_workq_elemt_free(workq_elemt);
+            break;
+        case COMPLETE:
+            MPIDI_NM_mpi_win_complete(workq_elemt->win_ptr);
+            OPA_store_int(workq_elemt->processed, 1);   /* set to true to let the main thread
+                                                         * learn that the item is processed */
+            MPIDI_workq_elemt_free(workq_elemt);
+            break;
+        case FENCE_FLUSH:
+            MPIDI_NM_win_fence_flush(workq_elemt->assert, workq_elemt->win_ptr);
+            OPA_store_int(workq_elemt->processed, 1);   /* set to true to let the main thread
+                                                         * learn that the item is processed */
+            MPIDI_workq_elemt_free(workq_elemt);
+            break;
+        case FENCE:
+            MPIDI_NM_mpi_win_fence(workq_elemt->assert, workq_elemt->win_ptr);
+            OPA_store_int(workq_elemt->processed, 1);   /* set to true to let the main thread
+                                                         * learn that the item is processed */
+            MPIDI_workq_elemt_free(workq_elemt);
+            break;
+        case LOCK:
+            MPIDI_NM_mpi_win_lock(workq_elemt->lock_type, workq_elemt->target_rank,
+                                  workq_elemt->assert, workq_elemt->win_ptr, workq_elemt->rma_addr);
+            OPA_store_int(workq_elemt->processed, 1);   /* set to true to let the main thread
+                                                         * learn that the item is processed */
+            MPIDI_workq_elemt_free(workq_elemt);
+            break;
+        case UNLOCK:
+            MPIDI_NM_mpi_win_unlock(workq_elemt->target_rank, workq_elemt->win_ptr,
+                                    workq_elemt->rma_addr);
+            OPA_store_int(workq_elemt->processed, 1);   /* set to true to let the main thread
+                                                         * learn that the item is processed */
+            MPIDI_workq_elemt_free(workq_elemt);
+            break;
+        case LOCK_ALL:
+            MPIDI_NM_mpi_win_lock_all(workq_elemt->assert, workq_elemt->win_ptr);
+            OPA_store_int(workq_elemt->processed, 1);   /* set to true to let the main thread
+                                                         * learn that the item is processed */
+            MPIDI_workq_elemt_free(workq_elemt);
+            break;
+        case UNLOCK_ALL:
+            MPIDI_NM_mpi_win_unlock_all(workq_elemt->win_ptr);
+            OPA_store_int(workq_elemt->processed, 1);   /* set to true to let the main thread
+                                                         * learn that the item is processed */
+            MPIDI_workq_elemt_free(workq_elemt);
+            break;
+        case FLUSH_LOCAL:
+            MPIDI_NM_mpi_win_flush_local(workq_elemt->target_rank, workq_elemt->win_ptr,
+                                         workq_elemt->rma_addr);
+            OPA_store_int(workq_elemt->processed, 1);   /* set to true to let the main thread
+                                                         * learn that the item is processed */
+            MPIDI_workq_elemt_free(workq_elemt);
+            break;
+        case FLUSH:
+            MPIDI_NM_mpi_win_flush(workq_elemt->target_rank, workq_elemt->win_ptr,
+                                   workq_elemt->rma_addr);
+            OPA_store_int(workq_elemt->processed, 1);   /* set to true to let the main thread
+                                                         * learn that the item is processed */
+            MPIDI_workq_elemt_free(workq_elemt);
+            break;
+        case FLUSH_LOCAL_ALL:
+            MPIDI_NM_mpi_win_flush_local_all(workq_elemt->win_ptr);
+            OPA_store_int(workq_elemt->processed, 1);   /* set to true to let the main thread
+                                                         * learn that the item is processed */
+            MPIDI_workq_elemt_free(workq_elemt);
+            break;
+        case FLUSH_ALL:
+            MPIDI_NM_mpi_win_flush_all(workq_elemt->win_ptr);
+            OPA_store_int(workq_elemt->processed, 1);   /* set to true to let the main thread
+                                                         * learn that the item is processed */
+            MPIDI_workq_elemt_free(workq_elemt);
+            break;
+
         default:
             mpi_errno = MPI_ERR_OTHER;
             goto fn_fail;
