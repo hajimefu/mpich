@@ -239,6 +239,29 @@ static inline int MPIDI_workq_dispatch(MPIDI_workq_elemt_t * workq_elemt)
             OPA_store_int(workq_elemt->processed, 1);
             MPIDI_workq_release_pt2pt_elemt(workq_elemt);
             break;
+        case PUT:
+            MPIDI_NM_mpi_put(workq_elemt->origin_addr, workq_elemt->origin_count,
+                             workq_elemt->origin_datatype, workq_elemt->target_rank,
+                             workq_elemt->target_disp, workq_elemt->target_count,
+                             workq_elemt->target_datatype, workq_elemt->win_ptr,
+                             workq_elemt->rma_addr);
+            OPA_decr_int(&MPIDI_CH4U_WIN(workq_elemt->win_ptr, local_enq_cnts));
+            MPIR_Datatype_release_if_not_builtin(workq_elemt->origin_datatype);
+            MPIR_Datatype_release_if_not_builtin(workq_elemt->target_datatype);
+            MPIDI_workq_elemt_free(workq_elemt);
+            break;
+        case GET:
+            MPIDI_NM_mpi_get(workq_elemt->result_addr, workq_elemt->result_count,
+                             workq_elemt->result_datatype, workq_elemt->target_rank,
+                             workq_elemt->target_disp, workq_elemt->target_count,
+                             workq_elemt->target_datatype, workq_elemt->win_ptr,
+                             workq_elemt->rma_addr);
+            OPA_decr_int(&MPIDI_CH4U_WIN(workq_elemt->win_ptr, local_enq_cnts));
+            /* Get handoff uses result_datatype instead of origin_datatype */
+            MPIR_Datatype_release_if_not_builtin(workq_elemt->result_datatype);
+            MPIR_Datatype_release_if_not_builtin(workq_elemt->target_datatype);
+            MPIDI_workq_elemt_free(workq_elemt);
+            break;
         default:
             mpi_errno = MPI_ERR_OTHER;
             goto fn_fail;
