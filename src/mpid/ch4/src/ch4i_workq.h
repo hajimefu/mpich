@@ -191,15 +191,19 @@ static inline int MPIDI_workq_vni_progress_pobj(int vni_idx)
 
     MPIR_Assert(MPIDI_CH4_ENABLE_POBJ_WORKQUEUES);
 
+    MPIDI_WORKQ_PROGRESS_START;
     DL_FOREACH(MPIDI_CH4_Global.workqueues.pobj[vni_idx], cur_workq) {
         MPIDI_workq_dequeue(&cur_workq->pend_ops, (void **) &workq_elemt);
         while (workq_elemt != NULL) {
+            MPIDI_WORKQ_ISSUE_START;
             mpi_errno = MPIDI_workq_dispatch(workq_elemt);
             if (mpi_errno != MPI_SUCCESS)
                 goto fn_fail;
+            MPIDI_WORKQ_ISSUE_STOP;
             MPIDI_workq_dequeue(&cur_workq->pend_ops, (void **) &workq_elemt);
         }
     }
+    MPIDI_WORKQ_PROGRESS_STOP;
   fn_fail:
     return mpi_errno;
 }
@@ -211,13 +215,18 @@ static inline int MPIDI_workq_vni_progress_pvni(int vni_idx)
 
     MPIR_Assert(!MPIDI_CH4_ENABLE_POBJ_WORKQUEUES);
 
+    MPIDI_WORKQ_PROGRESS_START;
+
     MPIDI_workq_dequeue(&MPIDI_CH4_Global.workqueues.pvni[vni_idx], (void **) &workq_elemt);
     while (workq_elemt != NULL) {
+        MPIDI_WORKQ_ISSUE_START;
         mpi_errno = MPIDI_workq_dispatch(workq_elemt);
         if (mpi_errno != MPI_SUCCESS)
             goto fn_fail;
+        MPIDI_WORKQ_ISSUE_STOP;
         MPIDI_workq_dequeue(&MPIDI_CH4_Global.workqueues.pvni[vni_idx], (void **) &workq_elemt);
     }
+    MPIDI_WORKQ_PROGRESS_STOP;
   fn_fail:
     return mpi_errno;
 }
@@ -238,9 +247,11 @@ static inline void MPIDI_workq_pt2pt_enqueue(MPIDI_workq_op_t op,
                                              int *flag,
                                              MPIR_Request ** message, OPA_int_t * processed)
 {
+    MPIDI_WORKQ_PT2PT_ENQUEUE_START;
     MPIDI_workq_pt2pt_enqueue_body(op, send_buf, recv_buf, count, datatype,
                                    rank, tag, comm_ptr, context_offset, addr, vni_idx, status,
                                    request, flag, message, processed);
+    MPIDI_WORKQ_PT2PT_ENQUEUE_STOP;
 }
 
 static inline void MPIDI_workq_rma_enqueue(MPIDI_workq_op_t op,
@@ -261,11 +272,13 @@ static inline void MPIDI_workq_rma_enqueue(MPIDI_workq_op_t op,
                                            MPIR_Win * win_ptr, MPIDI_av_entry_t * addr, int vni_idx,
                                            OPA_int_t * processed)
 {
+    MPIDI_WORKQ_RMA_ENQUEUE_START;
     MPIDI_workq_rma_enqueue_body(op, origin_addr, origin_count, origin_datatype,
                                  result_addr, result_count, result_datatype,
                                  target_rank, target_disp, target_count, target_datatype,
                                  acc_op, group, lock_type, assert, win_ptr, addr, vni_idx,
                                  processed);
+    MPIDI_WORKQ_RMA_ENQUEUE_STOP;
 }
 
 static inline int MPIDI_workq_vni_progress(int vni_idx)
