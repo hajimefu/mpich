@@ -264,6 +264,7 @@ typedef struct MPIDI_CH4U_map_t {
 } MPIDI_CH4U_map_t;
 
 typedef struct {
+    unsigned mt_model;
 } MPIDI_CH4_configurations_t;
 
 typedef struct MPIDI_CH4_Global_t {
@@ -291,6 +292,8 @@ typedef struct MPIDI_CH4_Global_t {
     OPA_int_t exp_seq_no;
     OPA_int_t nxt_seq_no;
     MPIU_buf_pool_t *buf_pool;
+
+    MPIDI_CH4_configurations_t settings;
 } MPIDI_CH4_Global_t;
 extern MPIDI_CH4_Global_t MPIDI_CH4_Global;
 #ifdef MPL_USE_DBG_LOGGING
