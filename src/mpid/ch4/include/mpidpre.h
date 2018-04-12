@@ -184,6 +184,8 @@ typedef struct {
 
         union {
         MPIDI_SHM_REQUEST_DECL} shm;
+
+        MPIDI_workq_elemt_t command;
     } ch4;
 } MPIDI_Devreq_t;
 #define MPIDI_REQUEST_HDR_SIZE              offsetof(struct MPIR_Request, dev.ch4.netmod)
@@ -427,7 +429,7 @@ typedef struct {
 #define MPID_DEV_COMM_DECL       MPIDI_Devcomm_t dev;
 #define MPID_DEV_OP_DECL         MPIDI_Devop_t   dev;
 
-typedef struct {
+typedef struct MPIDI_av_entry {
     union {
     MPIDI_NM_ADDR_DECL} netmod;
 #ifdef MPIDI_BUILD_CH4_LOCALITY_INFO
