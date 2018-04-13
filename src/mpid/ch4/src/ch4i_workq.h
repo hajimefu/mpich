@@ -171,7 +171,6 @@ static inline void MPIDI_workq_release_pt2pt_elemt(MPIDI_workq_elemt_t * workq_e
 static inline int MPIDI_workq_dispatch(MPIDI_workq_elemt_t * workq_elemt)
 {
     int mpi_errno = MPI_SUCCESS;
-    MPIR_Request *req;
 
     switch (workq_elemt->op) {
         case SEND:
@@ -220,6 +219,24 @@ static inline int MPIDI_workq_dispatch(MPIDI_workq_elemt_t * workq_elemt)
                                workq_elemt->tag, workq_elemt->comm_ptr,
                                workq_elemt->context_offset, workq_elemt->pt2pt_addr,
                                &workq_elemt->request);
+            MPIDI_workq_release_pt2pt_elemt(workq_elemt);
+            break;
+        case IPROBE:
+            MPIDI_NM_mpi_iprobe(workq_elemt->rank, workq_elemt->tag, workq_elemt->comm_ptr,
+                                workq_elemt->context_offset, workq_elemt->pt2pt_addr,
+                                workq_elemt->flag, workq_elemt->status);
+            OPA_store_int(workq_elemt->processed, 1);   /* set to true to let the main thread
+                                                         * learn that the item is processed */
+            MPIDI_workq_release_pt2pt_elemt(workq_elemt);
+            break;
+        case IMPROBE:
+            /* Note for future optimization: right now netmod allocates another request
+             * object for message object. We could pass `req` instead and let netmod use
+             * it, just like we did in send/recv. */
+            MPIDI_NM_mpi_improbe(workq_elemt->rank, workq_elemt->tag, workq_elemt->comm_ptr,
+                                 workq_elemt->context_offset, workq_elemt->pt2pt_addr,
+                                 workq_elemt->flag, workq_elemt->message, workq_elemt->status);
+            OPA_store_int(workq_elemt->processed, 1);
             MPIDI_workq_release_pt2pt_elemt(workq_elemt);
             break;
         default:
