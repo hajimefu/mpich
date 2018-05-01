@@ -109,7 +109,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_complete(int transport, MPIR_Win * win)
             MPIDI_workq_rma_enqueue(COMPLETE, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, 0, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, 0, 0, win, NULL, vni_idx, &processed);     /* only win, vni_idx and processed
                                                                                                                                                                                                  * are required for complete */
             /* Busy loop to block until all RMA ops are completed. */
-            while (!OPA_load_int(&processed));
+            while (!OPA_load_int(&processed))
+                OPA_pause();
 
             mpi_errno = MPI_SUCCESS;
         } else {
@@ -161,7 +162,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_post(int transport, MPIR_Group * group,
             MPIDI_workq_rma_enqueue(POST, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, 0, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, group, 0, assert, win, NULL, vni_idx, &processed);   /* only group, assert, win, vni_idx and processed
                                                                                                                                                                                                  * are required for post */
             /* Busy loop to block until all RMA ops are completed. */
-            while (!OPA_load_int(&processed));
+            while (!OPA_load_int(&processed))
+                OPA_pause();
 
             mpi_errno = MPI_SUCCESS;
         } else {
@@ -254,7 +256,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_lock(int transport, int lock_type, int ra
             MPIDI_workq_rma_enqueue(LOCK, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, rank, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, lock_type, assert, win, addr, vni_idx, &processed); /* only lock_type, target_rank, assert, win, vni_idx, rma_addr and processed
                                                                                                                                                                                                          * are required for post */
             /* Busy loop to block until all RMA ops are completed. */
-            while (!OPA_load_int(&processed));
+            while (!OPA_load_int(&processed))
+                OPA_pause();
 
             mpi_errno = MPI_SUCCESS;
         } else {
@@ -309,7 +312,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_unlock(int transport, int rank, MPIR_Win 
                                                                                                                                                                                                  * processed are required for unlock */
             mpi_errno = MPI_SUCCESS;
             /* Busy loop to block until all RMA ops are completed. */
-            while (!OPA_load_int(&processed));
+            while (!OPA_load_int(&processed))
+                OPA_pause();
 
             mpi_errno = MPI_SUCCESS;
         } else {
@@ -407,7 +411,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_fence(int transport, int assert, MPIR_Win
             MPIDI_workq_rma_enqueue(FENCE_FLUSH, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, 0, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, 0, assert, win, NULL, vni_idx, &processed);     /* only assert, win, vni_idx and
                                                                                                                                                                                                          * processed are required for fence */
             /* Busy loop to block until all RMA ops are completed. */
-            while (!OPA_load_int(&processed));
+            while (!OPA_load_int(&processed))
+                OPA_pause();
 
             mpi_errno = MPI_SUCCESS;
         } else {
@@ -535,7 +540,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_flush_local(int transport, int rank, MPIR
             MPIDI_workq_rma_enqueue(FLUSH_LOCAL, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, rank, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, 0, 0, win, addr, vni_idx, &processed);       /* only rank, win, addr and processed
                                                                                                                                                                                                          * are required for flush_local */
             /* Busy loop to block until all RMA ops are completed. */
-            while (!OPA_load_int(&processed));
+            while (!OPA_load_int(&processed))
+                OPA_pause();
 
             mpi_errno = MPI_SUCCESS;
         } else {
@@ -658,7 +664,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_flush(int transport, int rank, MPIR_Win *
             MPIDI_workq_rma_enqueue(FLUSH, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, rank, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, 0, 0, win, addr, vni_idx, &processed);     /* only rank, win, vni_idx, addr and processed
                                                                                                                                                                                                  * are required for flush */
             /* Busy loop to block until all RMA ops are completed. */
-            while (!OPA_load_int(&processed));
+            while (!OPA_load_int(&processed))
+                OPA_pause();
 
             mpi_errno = MPI_SUCCESS;
         } else {
@@ -710,7 +717,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_flush_local_all(int transport, MPIR_Win *
             MPIDI_workq_rma_enqueue(FLUSH_LOCAL_ALL, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, 0, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, 0, 0, win, NULL, vni_idx, &processed);      /* only win, vni_idx and processed
                                                                                                                                                                                                          * are required for flush_local_all */
             /* Busy loop to block until all RMA ops are completed. */
-            while (!OPA_load_int(&processed));
+            while (!OPA_load_int(&processed))
+                OPA_pause();
 
             mpi_errno = MPI_SUCCESS;
         } else {
@@ -762,7 +770,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_unlock_all(int transport, MPIR_Win * win)
             MPIDI_workq_rma_enqueue(UNLOCK_ALL, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, 0, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, 0, 0, win, NULL, vni_idx, &processed);   /* only win, vni_idx and processed
                                                                                                                                                                                                  * are required for unlock_all */
             /* Busy loop to block until all RMA ops are completed. */
-            while (!OPA_load_int(&processed));
+            while (!OPA_load_int(&processed))
+                OPA_pause();
 
             mpi_errno = MPI_SUCCESS;
         } else {
@@ -858,7 +867,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_flush_all(int transport, MPIR_Win * win)
             MPIDI_workq_rma_enqueue(FLUSH_ALL, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, 0, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, 0, 0, win, NULL, vni_idx, &processed);    /* only win, vni_idx and processed
                                                                                                                                                                                                  * are required for unlock_all */
             /* Busy loop to block until all RMA ops are completed. */
-            while (!OPA_load_int(&processed));
+            while (!OPA_load_int(&processed))
+                OPA_pause();
 
             mpi_errno = MPI_SUCCESS;
         } else {
@@ -909,7 +919,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_win_lock_all(int transport, int assert, MPIR_
             MPIDI_workq_rma_enqueue(LOCK_ALL, NULL, 0, MPI_DATATYPE_NULL, NULL, 0, MPI_DATATYPE_NULL, 0, 0, 0, MPI_DATATYPE_NULL, MPI_OP_NULL, NULL, 0, assert, win, NULL, vni_idx, &processed);        /* only assert, win, vni_idx and processed
                                                                                                                                                                                                          * are required for unlock_all */
             /* Busy loop to block until all RMA ops are completed. */
-            while (!OPA_load_int(&processed));
+            while (!OPA_load_int(&processed))
+                OPA_pause();
 
             mpi_errno = MPI_SUCCESS;
         } else {
