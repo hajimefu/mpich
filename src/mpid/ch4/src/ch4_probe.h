@@ -52,7 +52,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_iprobe(int transport,
                                       status, req, flag, NULL /*message */ ,
                                       &processed);
             /* Busy loop to block until iprobe req is processed by the progress thread */
-            while (!OPA_load_int(&processed));
+            while (!OPA_load_int(&processed))
+                OPA_pause();
             /* FIXME: alternatively may use yield, e.g., MPL_thread_yield if problem arises when
              * sharing hardware thread between the main/this thread and the progress thread */
             MPIR_Request_free(req);     /* Now it's safe to free the request */
@@ -163,7 +164,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_improbe(int transport,
                                       source, tag, comm, context_offset, av, vni_idx,
                                       status, req, flag, message, &processed);
             /* Busy loop to block until improbe req is completed by the progress thread */
-            while (!OPA_load_int(&processed));
+            while (!OPA_load_int(&processed))
+                OPA_pause();
             /* FIXME: alternatively may use yield, e.g., MPL_thread_yield if problem arises when
              * sharing hardware thread between the main/this thread and the progress thread */
             MPIR_Request_free(req);     /* Now it's safe to free the request */
